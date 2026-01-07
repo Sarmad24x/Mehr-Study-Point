@@ -1,0 +1,464 @@
+# Library Seat Management App – Final Requirements Document
+
+## 1. Project Overview
+**Project Name**: Library Seat Management System  
+**Purpose**: Manage library seat reservations, student enrollment, fee tracking, and seat assignments for a library with 160 seats.  
+**Platform**: Mobile App (iOS/Android) with offline support  
+**Users**: 3 library administrators with individual credentials and defined permissions  
+**Initial Seat Capacity**: 160 seats (expandable)
+
+## 2. Functional Requirements
+
+### 2.1 User Authentication & Sync
+- **AU-01**: Individual login credentials for each user (3 separate accounts)
+- **AU-02**: Multi-device real-time synchronization
+- **AU-03**: Role-based permissions (One Admin and Two Employees)
+- **AU-04**: Auto-sync when internet connection is restored
+- **AU-05**: Session management and secure logout
+
+### 2.2 Seat Management
+- **SM-01**: Display and manage 160 seats initially
+- **SM-02**: Add more seats feature (unlimited expansion capability)
+- **SM-03**: Show real-time count of enrolled vs. unenrolled seats
+- **SM-04**: Display actual seat numbers with visual status indication
+- **SM-05**: Seat status check by entering seat number
+- **SM-06**: Prevent double booking of seats
+- **SM-07**: Color-coded seat display:
+  - Red = Reserved
+  - Green = Available
+  - Yellow = Temporarily unavailable (maintenance)
+- **SM-08**: Bulk seat management options
+
+### 2.3 Student Management (Restricted Permissions)
+- **ST-01**: Add new student records with:
+  - Full name
+  - Contact information
+  - Admission date
+  - Assigned seat number
+  - Guardian/parent details (optional)
+- **ST-02**: Edit existing student information (All users can edit)
+- **ST-03**: Delete/archive student records when they leave library
+- **ST-04**: Retain historical student records for minimum 2 years
+- **ST-05**: Search students by:
+  - Name
+  - Seat number
+  - Contact number
+  - Admission date range
+- **ST-06**: Import/export student data (CSV format)
+
+### 2.4 Seat Assignment
+- **SA-01**: Assign specific seat to specific student
+- **SA-02**: View student-seat mapping with filtering options
+- **SA-03**: Reassign seats when students leave
+- **SA-04**: Validation to prevent seat conflicts
+- **SA-05**: Temporary seat holds (up to 7 days)
+- **SA-06**: Seat swapping between students
+
+### 2.5 Fee Management (Restricted Permissions)
+- **FM-01**: Track admission fee per student (All admins can edit)
+- **FM-02**: Track monthly fee per student (All admins can edit)
+- **FM-03**: Mark fees as paid/unpaid
+- **FM-04**: Set and track fee due dates (Only Admin)
+- **FM-05**: Calculate total fees collected (monthly + admission)
+- **FM-06**: Edit fee records (Only Admin)
+
+### 2.6 Dashboard & Reporting
+- **DR-01**: Main dashboard showing:
+  - Total seats count (current: 160+)
+  - Reserved seats count
+  - Available seats count
+  - Total fees collected (current month)
+  - Pending fees amount
+  - Active students count
+- **DR-03**: Export reports to PDF/Excel/CSV
+
+### 2.7 System Configuration
+- **SC-01**: Add more seats (expand beyond initial 160)
+- **SC-02**: Configure seat numbering system
+- **SC-03**: Set default fee amounts (only admin)
+- **SC-04**: Configure payment reminder schedules
+- **SC-05**: User management (add/edit users)(Only Admin)
+
+### 2.8 Offline Functionality
+- **OF-01**: Full app functionality without internet
+- **OF-02**: Data integrity validation
+
+## 3. Non-Functional Requirements
+
+### 3.1 Performance
+- **NF-01**: App loading time < 3 seconds
+- **NF-02**: Seat status updates in real-time (< 2 seconds)
+- **NF-03**: Handle 160+ seats with smooth scrolling
+- **NF-04**: Search functionality response < 1 second
+
+### 3.2 Reliability
+- **NF-05**: 99.5% uptime for online services
+- **NF-06**: Data integrity during sync operations
+- **NF-07**: Automatic backup of local data
+- **NF-08**: Crash-free experience
+
+### 3.3 Usability
+- **NF-09**: Intuitive interface requiring minimal training
+- **NF-10**: Consistent design across all screens
+- **NF-11**: Clear error messages and guidance
+- **NF-12**: Accessibility compliant (WCAG 2.1 AA)
+
+### 3.4 Security
+- **NF-13**: Individual secure authentication for each user
+- **NF-14**: Data encryption at rest and in transit
+- **NF-15**: Audit logs for all critical operations
+- **NF-16**: Password policy enforcement
+- **NF-17**: Session timeout (15 minutes inactivity)
+
+### 3.5 Scalability
+- **NF-18**: Support for unlimited seat expansion
+- **NF-19**: Handle up to 10,000 student records
+- **NF-20**: Support additional admin users in future
+
+## 4. App Screens Specification
+
+### 4.1 Login Screen
+**Purpose**: Individual user authentication  
+**Elements**:
+- Email field
+- Password field
+- Login button
+- Forgot password option
+- Remember me option
+- Version information
+
+### 4.2 Dashboard Screen
+**Purpose**: Overview of key metrics  
+**Elements**:
+- Welcome message with user name
+- Total seats card (160+ with expand indicator)
+- Reserved seats card with percentage
+- Available seats card
+- Total fees collected card (current month)
+- Pending fees card
+- Quick action buttons
+- Date range selector
+- Activity feed
+
+### 4.3 Seat Management Screen
+**Purpose**: Manage all 160+ seats  
+**Elements**:
+- Grid view of all seats (scrollable)
+- List view alternative
+- Add more seats button
+- Search seat number field
+- Filter by:
+  - Status (All/Reserved/Available/Maintenance)
+  - Section/Zone (if applicable)
+- Bulk actions:
+  - Mark multiple as available
+  - Set maintenance status
+- Seat details panel on selection
+
+### 4.4 Student Management Screen
+**Purpose**: CRUD operations for student records  
+**Elements**:
+- Student list with pagination (10 per page)
+- Advanced search with filters
+- Add new student button (floating action)
+- Student details modal with edit capability
+- Archive/delete option (with confirmation)
+- Import/export buttons
+
+### 4.5 Seat Assignment Screen
+**Purpose**: Assign/unassign seats to students  
+**Elements**:
+- Dual panel layout:
+  - Left: Available seats list
+  - Right: Unassigned students list
+- Drag & drop interface
+- Quick assign button
+- Assignment history log
+- Temporary hold management
+- Mass assignment for groups
+
+### 4.6 Fee Management Screen
+**Purpose**: Track and manage student fees  
+**Elements**:
+- Student fee list with sorting
+- Fee status indicators (color-coded)
+- Quick edit buttons (Only admin)
+- Mark as paid with payment details
+- Set due date with calendar picker
+- Apply late fee option
+- Payment history view
+
+### 4.7 Reports & Analytics Screen
+**Purpose**: Generate and view reports  
+**Elements**:
+- Report type selector:
+  - Daily occupancy report
+  - Monthly financial report
+  - Student attendance report
+  - Fee collection report
+  - Custom report builder
+- Date range picker with presets
+- Report preview with charts
+- Export options (PDF/Excel/CSV)
+- Schedule automated reports
+
+### 4.8 System Settings Screen (Only Admin)
+**Purpose**: App configuration and management  
+**Elements**:
+- **Seat Configuration**:
+  - Add more seats interface
+  - Set seat numbering pattern
+  - Configure seat layout
+- **Fee Settings**:(Only Admin)
+  - Default admission fee
+  - Default monthly fee
+  - Late fee rules
+- **User Management**:(Only Admin)
+  - Add new admin users
+  - Edit existing users
+  - Reset passwords
+  - Deactivate users
+- **System**:
+  - Sync settings
+  - Backup/restore
+  - Data cleanup options
+  - Audit logs viewer
+
+### 4.9 Profile Screen
+**Purpose**: Individual user account management  
+**Elements**:
+- User information display
+- Change password
+- Notification preferences
+- Sync status
+- Login history
+- Logout button
+
+
+
+## 6. Database Schema
+
+### 6.1 Core Tables
+
+**Users Table**
+user_id (PK, UUID)
+email (UNIQUE)
+password_hash
+full_name
+phone_number
+role (Admin/SuperAdmin)
+is_active
+last_login
+created_at
+updated_at
+
+
+**Seats Table**
+seat_id (PK)
+seat_number (UNIQUE)
+status (Available/Reserved/Maintenance)
+zone_section
+added_by (FK → Users)
+created_at
+is_active
+
+
+**Students Table**
+student_id (PK)
+full_name
+contact_number
+email
+guardian_name
+guardian_contact
+address
+admission_date
+status (Active/Inactive/Archived)
+created_by (FK → Users)
+updated_by (FK → Users)
+created_at
+updated_at
+
+**Assignments Table**
+assignment_id (PK)
+student_id (FK)
+seat_id (FK)
+assigned_date
+assigned_by (FK → Users)
+expected_end_date
+actual_end_date
+status (Active/Completed/Cancelled)
+notes
+
+**Fees Table**
+fee_id (PK)
+student_id (FK)
+fee_type (Admission/Monthly/Late/Waiver)
+amount
+due_date
+paid_date
+paid_amount
+status (Pending/Paid/Partial/Overdue)
+payment_method
+receipt_number
+created_by (FK → Users)
+updated_by (FK → Users)
+created_at
+updated_at
+
+**Audit Logs Table**
+log_id (PK)
+user_id (FK)
+action_type (CREATE/UPDATE/DELETE/LOGIN/LOGOUT)
+table_name
+record_id
+old_values (JSON)
+new_values (JSON)
+ip_address
+device_info
+timestamp
+
+## 7. Technical Specifications
+
+### 7.1 Recommended Tech Stack
+**Frontend**: Flutter (iOS & Android support)
+**Local Database**: SQLite with Hive for caching
+**Backend**: Supabase (Recommended for SQL needs)
+  - PostgreSQL Database
+  - Supabase Auth (individual credentials)
+  - Realtime subscriptions
+  - Storage for documents
+**State Management**: Riverpod
+**Offline Sync**: Custom sync engine with conflict resolution
+**Push Notifications**: Firebase Cloud Messaging (for fee reminders)
+
+### 7.2 Development Timeline
+**Phase 1: Foundation** (4 weeks)
+- Authentication system (individual logins)
+- Basic seat management (160 seats)
+- Student CRUD with edit permissions
+- Local database setup
+
+**Phase 2: Core Features** (5 weeks)
+- Fee management with edit capability
+- Seat assignment system
+- Add more seats feature
+- Basic reporting
+
+**Phase 3: Advanced Features** (4 weeks)
+- Advanced reporting engine
+- Offline sync implementation
+- Audit logging system
+- User management
+
+**Phase 4: Polish & Testing** (3 weeks)
+- UI/UX refinements
+- Performance optimization
+- Security testing
+- User training materials
+
+**Total**: 16 weeks (4 months)
+
+## 8. Acceptance Criteria
+
+### 8.1 Critical (Must Have)
+- [ ] Three separate user accounts with individual credentials
+- [ ] Manage 160 seats with ability to add more
+- [ ] All users can edit student records
+- [ ] Only admin can edit fee amounts and status
+- [ ] Real-time seat status updates
+- [ ] Offline functionality with sync
+- [ ] Basic reporting and dashboard
+
+### 8.2 Important (Should Have)
+- [ ] Advanced search and filtering
+- [ ] Bulk operations
+- [ ] Receipt generation
+- [ ] Audit trail for all edits
+- [ ] Data export capabilities
+- [ ] Backup and restore
+
+## 9. Success Metrics
+
+### 9.1 Performance Metrics
+- Seat assignment time: < 10 seconds
+- Report generation: < 30 seconds
+- App startup: < 3 seconds
+- Sync completion: < 1 minute for daily changes
+
+### 9.2 Business Metrics
+- 100% seat occupancy tracking accuracy
+- 95% fee collection tracking accuracy
+- 90% reduction in manual record-keeping time
+- 100% data integrity during power/internet outages
+
+### 9.3 User Satisfaction
+- 90% user satisfaction score (post-training)
+- < 5 support requests per month after stabilization
+- Average task completion time reduced by 70%
+
+## 10. Maintenance & Support
+
+### 10.1 Post-Launch Support (Included)
+- 60 days bug-fix warranty
+- 6 months minor updates and enhancements
+- Complete documentation and user manuals
+- 2 training sessions for all users
+- Email/chat support during business hours
+
+### 10.2 Ongoing Maintenance (Optional)
+- Monthly system health checks
+- Regular security updates
+- Feature enhancements based on feedback
+- Database optimization
+- Backup management
+
+### 10.3 Scalability Roadmap
+- Phase 1: Current requirements (3 users, 160+ seats)
+- Phase 2: Support for 500+ seats
+- Phase 3: Multi-branch support
+- Phase 4: Parent portal integration
+- Phase 5: Advanced analytics and AI recommendations
+
+## 11. Risks & Mitigations
+
+| Risk | Probability | Impact | Mitigation |
+|------|------------|--------|------------|
+| Data sync conflicts | Medium | High | Implement conflict resolution strategy |
+| Internet connectivity issues | High | Medium | Robust offline mode with clear indicators |
+| User error in fee editing | Medium | Medium | Audit trails and confirmation dialogs |
+| Seat expansion complexity | Low | Low | Simple add seats interface with validation |
+| Performance with 160+ seats | Low | Medium | Virtual scrolling and pagination |
+| Security breaches | Low | High | Encryption, secure auth, regular audits |
+
+## 12. Assumptions
+
+1. Initial library capacity: 160 seats (expandable)
+2. Three users initially, expandable later
+3. All admins have equal editing permissions for students and fees
+4. Internet available periodically for sync (not 24/7)
+5. Library operates 6 days a week
+6. Student records retained for minimum 2 years
+7. Monthly fee cycle follows calendar month
+
+## 13. Constraints
+
+1. Budget: Fixed development budget
+2. Timeline: 4-month delivery timeline
+3. Platform: Must support Android 9+ and iOS 13+
+4. Data Privacy: Compliance with local data protection laws
+5. Offline Requirement: Must function 8+ hours without internet
+
+---
+
+**Document Version**: 2.0  
+**Last Updated**: 07-1-2026  
+**Changes from v1.0**: 
+1. Increased seat capacity from 50 to 160 with expansion feature
+2. Changed from shared credentials to individual user accounts
+3. Specified that all admins can edit student and fee records
+4. Added detailed permission matrix
+5. Enhanced technical specifications for scalability  
+**Prepared For**: Mehr Study Point  
+**Prepared By**: Sarmad Sajjad  
+**Status**: Approved / Pending Approval  
+**Approval Signatures**: _________________________
