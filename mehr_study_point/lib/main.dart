@@ -3,6 +3,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
+import 'src/features/auth/presentation/auth_widget.dart';
+
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
@@ -11,8 +13,8 @@ Future<void> main() async {
 
   // Initialize Supabase
   await Supabase.initialize(
-    url: 'https://lrviyoxxxhratkyltcao.supabase.co',
-    anonKey: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imxydml5b3h4eGhyYXRreWx0Y2FvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njc4NTI3NTUsImV4cCI6MjA4MzQyODc1NX0.pOe4jL3JH32Axx2j6tT4GWgEcGZSjC-B3vLztin3M-U',
+    url: 'YOUR_SUPABASE_URL',
+    anonKey: 'YOUR_SUPABASE_ANON_KEY',
   );
 
   runApp(const ProviderScope(
@@ -31,11 +33,7 @@ class MyApp extends StatelessWidget {
         primarySwatch: Colors.blue,
         visualDensity: VisualDensity.adaptivePlatformDensity,
       ),
-      home: const Scaffold(
-        body: Center(
-          child: Text('Mehr Study Point'),
-        ),
-      ),
+      home: const AuthWidget(),
     );
   }
 }
