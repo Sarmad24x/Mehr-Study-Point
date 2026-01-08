@@ -17,6 +17,15 @@ class _SeatManagementScreenState extends ConsumerState<SeatManagementScreen> {
 
   bool get _isSelectionMode => _selectedSeatIds.isNotEmpty;
 
+  @override
+  void didUpdateWidget(covariant SeatManagementScreen oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    // Clear selection if filter or search changes
+    if (_isSelectionMode) {
+      WidgetsBinding.instance.addPostFrameCallback((_) => _clearSelection());
+    }
+  }
+
   void _onSeatTap(Seat seat) {
     if (_isSelectionMode) {
       setState(() {
@@ -75,64 +84,80 @@ class _SeatManagementScreenState extends ConsumerState<SeatManagementScreen> {
   @override
   Widget build(BuildContext context) {
     final seatsAsync = ref.watch(seatListControllerProvider);
+    final filteredSeats = ref.watch(filteredSeatsProvider);
 
     return Scaffold(
       appBar: _isSelectionMode ? _buildSelectionAppBar() : _buildDefaultAppBar(),
-      body: seatsAsync.when(
-        data: (seats) {
-          if (seats.isEmpty) {
-            return const Center(child: Text('No seats found.'));
-          }
-          return RefreshIndicator(
-            onRefresh: () => ref.refresh(seatListControllerProvider.future),
-            child: GridView.builder(
-              padding: const EdgeInsets.all(8.0),
-              gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                crossAxisCount: 5, // 5 seats per row
-                crossAxisSpacing: 8.0,
-                mainAxisSpacing: 8.0,
-              ),
-              itemCount: seats.length,
-              itemBuilder: (context, index) {
-                final seat = seats[index];
-                final isSelected = _selectedSeatIds.contains(seat.id);
-                return Card(
-                  elevation: isSelected ? 8.0 : 2.0,
-                  color: _getColorForStatus(seat.status, isSelected: isSelected),
-                  child: InkWell(
-                    onTap: () => _onSeatTap(seat),
-                    onLongPress: () => _onSeatLongPress(seat),
-                    child: Stack(
-                      children: [
-                        Center(
-                          child: Text(
-                            seat.seatNumber.toString(),
-                            style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+      body: Column(
+        children: [
+          _buildFilterChips(),
+          Expanded(
+            child: seatsAsync.when(
+              data: (_) {
+                if (filteredSeats.isEmpty) {
+                  return const Center(child: Text('No seats match the current criteria.'));
+                }
+                return RefreshIndicator(
+                  onRefresh: () => ref.refresh(seatListControllerProvider.future),
+                  child: GridView.builder(
+                    padding: const EdgeInsets.all(8.0),
+                    gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                      crossAxisCount: 5,
+                      crossAxisSpacing: 8.0,
+                      mainAxisSpacing: 8.0,
+                    ),
+                    itemCount: filteredSeats.length,
+                    itemBuilder: (context, index) {
+                      final seat = filteredSeats[index];
+                      final isSelected = _selectedSeatIds.contains(seat.id);
+                      return Card(
+                        elevation: isSelected ? 8.0 : 2.0,
+                        color: _getColorForStatus(seat.status, isSelected: isSelected),
+                        child: InkWell(
+                          onTap: () => _onSeatTap(seat),
+                          onLongPress: () => _onSeatLongPress(seat),
+                          child: Stack(
+                            children: [
+                              Center(
+                                child: Text(
+                                  seat.seatNumber.toString(),
+                                  style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                                ),
+                              ),
+                              if (isSelected)
+                                const Positioned(
+                                  top: 4,
+                                  right: 4,
+                                  child: Icon(Icons.check_circle, color: Colors.white, size: 18),
+                                ),
+                            ],
                           ),
                         ),
-                        if (isSelected)
-                          const Positioned(
-                            top: 4,
-                            right: 4,
-                            child: Icon(Icons.check_circle, color: Colors.white, size: 18),
-                          ),
-                      ],
-                    ),
+                      );
+                    },
                   ),
                 );
               },
+              loading: () => const Center(child: CircularProgressIndicator()),
+              error: (err, stack) => Center(child: Text('Error: $err')),
             ),
-          );
-        },
-        loading: () => const Center(child: CircularProgressIndicator()),
-        error: (err, stack) => Center(child: Text('Error: $err')),
+          ),
+        ],
       ),
     );
   }
 
   AppBar _buildDefaultAppBar() {
     return AppBar(
-      title: const Text('Seat Management'),
+      title: TextField(
+        onChanged: (value) => ref.read(seatSearchQueryProvider.notifier).state = value,
+        decoration: const InputDecoration(
+          hintText: 'Search Seat Number...',
+          border: InputBorder.none,
+          hintStyle: TextStyle(color: Colors.white70),
+        ),
+        style: const TextStyle(color: Colors.white),
+      ),
     );
   }
 
@@ -145,12 +170,12 @@ class _SeatManagementScreenState extends ConsumerState<SeatManagementScreen> {
       ),
       actions: [
         IconButton(
-          icon: const Icon(Icons.event_available, color: Colors.green),
+          icon: const Icon(Icons.event_available, color: Colors.greenAccent),
           tooltip: 'Mark as Available',
           onPressed: () => _updateMultipleSeats(SeatStatus.available),
         ),
         IconButton(
-          icon: const Icon(Icons.build, color: Colors.orange),
+          icon: const Icon(Icons.build, color: Colors.orangeAccent),
           tooltip: 'Mark as Maintenance',
           onPressed: () => _updateMultipleSeats(SeatStatus.maintenance),
         ),
@@ -158,6 +183,26 @@ class _SeatManagementScreenState extends ConsumerState<SeatManagementScreen> {
     );
   }
 
+  Widget _buildFilterChips() {
+    final currentFilter = ref.watch(seatStatusFilterProvider);
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 8.0, vertical: 4.0),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+        children: SeatStatus.values.map((status) {
+          return FilterChip(
+            label: Text(status.toString().split('.').last.toUpperCase()),
+            selected: currentFilter == status,
+            onSelected: (isSelected) {
+              ref.read(seatStatusFilterProvider.notifier).state = isSelected ? status : null;
+            },
+          );
+        }).toList(),
+      ),
+    );
+  }
+  
   void _showSeatDetails(BuildContext context, Seat seat) {
      showModalBottomSheet(
       context: context,
