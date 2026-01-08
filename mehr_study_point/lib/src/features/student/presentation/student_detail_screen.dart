@@ -5,6 +5,7 @@ import '../data/student_providers.dart';
 import '../domain/student.dart';
 import 'edit_student_screen.dart';
 import 'student_list_controller.dart';
+import '../../fee/presentation/fee_list_screen.dart';
 
 final studentDetailProvider = FutureProvider.autoDispose.family<Student, String>((ref, studentId) {
   final studentRepository = ref.watch(studentRepositoryProvider);
@@ -84,7 +85,7 @@ class StudentDetailScreen extends ConsumerWidget {
             child: SingleChildScrollView(
               padding: const EdgeInsets.all(16.0),
               child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
+                crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
                   _buildDetailRow('Full Name', student.fullName),
                   _buildDetailRow('Contact Number', student.contactNumber),
@@ -95,6 +96,21 @@ class StudentDetailScreen extends ConsumerWidget {
                     _buildDetailRow('Guardian Contact', student.guardianContactNumber!),
                   _buildDetailRow('Admission Date', student.admissionDate.toLocal().toString().split(' ')[0]),
                   _buildDetailRow('Status', student.isActive ? 'Active' : 'Inactive'),
+                  const SizedBox(height: 24),
+                  ElevatedButton.icon(
+                    icon: const Icon(Icons.payment),
+                    label: const Text('View Fee History'),
+                    onPressed: () {
+                      Navigator.of(context).push(
+                        MaterialPageRoute(
+                          builder: (context) => FeeListScreen(
+                            studentId: student.id,
+                            studentName: student.fullName,
+                          ),
+                        ),
+                      );
+                    },
+                  ),
                 ],
               ),
             ),
@@ -115,7 +131,7 @@ class StudentDetailScreen extends ConsumerWidget {
           Text(label, style: const TextStyle(fontWeight: FontWeight.bold)),
           const SizedBox(height: 4),
           Text(value),
-          const Divider(),
+          if (label != 'Status') const Divider(),
         ],
       ),
     );
