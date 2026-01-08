@@ -12,4 +12,7 @@ abstract class StudentRepository {
 
   /// Updates an existing student record.
   Future<void> updateStudent(Student student);
+
+  /// Deletes a student record by their ID.
+  Future<void> deleteStudent(String id);
 }

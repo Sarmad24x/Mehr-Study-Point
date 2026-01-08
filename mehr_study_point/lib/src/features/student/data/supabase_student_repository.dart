@@ -49,4 +49,13 @@ class SupabaseStudentRepository implements StudentRepository {
       throw Exception('Failed to update student: $e');
     }
   }
+
+  @override
+  Future<void> deleteStudent(String id) async {
+    try {
+      await _client.from(_table).delete().eq('id', id);
+    } catch (e) {
+      throw Exception('Failed to delete student: $e');
+    }
+  }
 }
