@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import 'add_student_screen.dart';
 import 'student_list_controller.dart';
 
 class StudentListScreen extends ConsumerWidget {
@@ -35,7 +36,9 @@ class StudentListScreen extends ConsumerWidget {
       ),
       floatingActionButton: FloatingActionButton(
         onPressed: () {
-          // TODO: Navigate to Add Student Screen
+          Navigator.of(context).push(
+            MaterialPageRoute(builder: (context) => const AddStudentScreen()),
+          );
         },
         child: const Icon(Icons.add),
       ),
