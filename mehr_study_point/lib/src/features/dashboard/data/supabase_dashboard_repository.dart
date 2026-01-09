@@ -23,7 +23,7 @@ class SupabaseDashboardRepository implements DashboardRepository {
             .select('amount')
             .eq('status', 'paid')
             .gte('paid_date', firstDayOfMonth.toIso8601String()),
-        _client.from('fees').select('amount').in_('status', ['pending', 'overdue']),
+        _client.from('fees').select('amount').inFilter('status', ['pending', 'overdue']),
         _client.from('students').select('id').gte('admission_date', firstDayOfMonth.toIso8601String()),
       ]);
 

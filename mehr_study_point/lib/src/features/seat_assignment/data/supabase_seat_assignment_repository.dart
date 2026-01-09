@@ -15,7 +15,7 @@ class SupabaseSeatAssignmentRepository implements SeatAssignmentRepository {
       final response = await _client
           .from('students')
           .select()
-          .is_('assigned_seat_id', null)
+          .isFilter('assigned_seat_id', null)
           .eq('is_active', true);
       return (response as List).map((item) => Student.fromMap(item)).toList();
     } catch (e) {

@@ -62,7 +62,7 @@ class DashboardScreen extends ConsumerWidget {
   }
 
   Widget _buildStatsGrid(DashboardStats stats) {
-    final currencyFormat = NumberFormat.currency(symbol: '$', decimalDigits: 2);
+    final currencyFormat = NumberFormat.currency(symbol: '\$', decimalDigits: 2);
 
     return GridView.count(
       crossAxisCount: 2,

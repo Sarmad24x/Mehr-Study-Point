@@ -76,7 +76,7 @@ class FeeListScreen extends ConsumerWidget {
                       backgroundColor: _getColorForStatus(fee.status),
                       child: Icon(fee.status == FeeStatus.paid ? Icons.check : Icons.receipt, color: Colors.white),
                     ),
-                    title: Text('Amount: $${fee.amount.toStringAsFixed(2)}'),
+                    title: Text('Amount: \$${fee.amount.toStringAsFixed(2)}'),
                     subtitle: Text('Due: ${DateFormat.yMMMd().format(fee.dueDate)}\nStatus: ${fee.status.toString().split('.').last.toUpperCase()}'),
                     trailing: fee.status != FeeStatus.paid
                         ? TextButton(
