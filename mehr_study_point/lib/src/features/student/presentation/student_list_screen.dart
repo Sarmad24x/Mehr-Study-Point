@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/utils/report_service.dart';
 import 'add_student_screen.dart';
 import 'student_detail_screen.dart';
 import 'student_list_controller.dart';
@@ -15,6 +16,27 @@ class StudentListScreen extends ConsumerWidget {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Students'),
+        actions: [
+          studentsAsync.when(
+            data: (students) => IconButton(
+              icon: const Icon(Icons.file_download),
+              tooltip: 'Export CSV',
+              onPressed: () async {
+                try {
+                  await ReportService.exportStudentsToCsv(students);
+                } catch (e) {
+                  if (context.mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(content: Text('Failed to export CSV: $e')),
+                    );
+                  }
+                }
+              },
+            ),
+            loading: () => const SizedBox.shrink(),
+            error: (_, __) => const SizedBox.shrink(),
+          ),
+        ],
       ),
       body: studentsAsync.when(
         data: (students) {
