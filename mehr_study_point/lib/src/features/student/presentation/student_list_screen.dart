@@ -1,6 +1,8 @@
+import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/providers.dart';
 import '../../../core/utils/report_service.dart';
 import 'add_student_screen.dart';
 import 'student_detail_screen.dart';
@@ -12,69 +14,104 @@ class StudentListScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final studentsAsync = ref.watch(studentListControllerProvider);
+    final filteredStudents = ref.watch(filteredStudentsProvider);
+    final connectivityAsync = ref.watch(connectivityProvider);
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Students'),
+        title: TextField(
+          onChanged: (value) => ref.read(studentSearchQueryProvider.notifier).state = value,
+          decoration: const InputDecoration(
+            hintText: 'Search Name or Number...',
+            border: InputBorder.none,
+            hintStyle: TextStyle(color: Colors.white70),
+          ),
+          style: const TextStyle(color: Colors.white),
+        ),
         actions: [
           studentsAsync.when(
             data: (students) => IconButton(
               icon: const Icon(Icons.file_download),
               tooltip: 'Export CSV',
-              onPressed: () async {
-                try {
-                  await ReportService.exportStudentsToCsv(students);
-                } catch (e) {
-                  if (context.mounted) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(content: Text('Failed to export CSV: $e')),
-                    );
-                  }
-                }
-              },
+              onPressed: () => ReportService.exportStudentsToCsv(students),
             ),
             loading: () => const SizedBox.shrink(),
             error: (_, __) => const SizedBox.shrink(),
           ),
         ],
       ),
-      body: studentsAsync.when(
-        data: (students) {
-          if (students.isEmpty) {
-            return const Center(child: Text('No students found.'));
-          }
-          return RefreshIndicator(
-            onRefresh: () => ref.refresh(studentListControllerProvider.future),
-            child: ListView.builder(
-              itemCount: students.length,
-              itemBuilder: (context, index) {
-                final student = students[index];
-                return ListTile(
-                  title: Text(student.fullName),
-                  subtitle: Text(student.contactNumber),
-                  onTap: () {
-                    Navigator.of(context).push(
-                      MaterialPageRoute(
-                        builder: (context) => StudentDetailScreen(studentId: student.id),
-                      ),
-                    );
-                  },
+      body: Column(
+        children: [
+          _buildConnectivityBanner(connectivityAsync),
+          Expanded(
+            child: studentsAsync.when(
+              data: (_) {
+                if (filteredStudents.isEmpty) {
+                  return const Center(child: Text('No students found matching your search.'));
+                }
+                return RefreshIndicator(
+                  onRefresh: () => ref.refresh(studentListControllerProvider.future),
+                  child: ListView.separated(
+                    padding: const EdgeInsets.symmetric(vertical: 8),
+                    itemCount: filteredStudents.length,
+                    separatorBuilder: (context, index) => const Divider(height: 1, indent: 72),
+                    itemBuilder: (context, index) {
+                      final student = filteredStudents[index];
+                      return ListTile(
+                        leading: CircleAvatar(
+                          backgroundColor: Colors.blue.shade100,
+                          child: Text(student.fullName[0].toUpperCase()),
+                        ),
+                        title: Text(student.fullName, style: const TextStyle(fontWeight: FontWeight.bold)),
+                        subtitle: Text(student.contactNumber),
+                        trailing: const Icon(Icons.chevron_right, size: 18),
+                        onTap: () {
+                          Navigator.of(context).push(
+                            MaterialPageRoute(
+                              builder: (context) => StudentDetailScreen(studentId: student.id),
+                            ),
+                          );
+                        },
+                      );
+                    },
+                  ),
                 );
               },
+              loading: () => const Center(child: CircularProgressIndicator()),
+              error: (err, stack) => Center(child: Text('Error: $err')),
             ),
-          );
-        },
-        loading: () => const Center(child: CircularProgressIndicator()),
-        error: (err, stack) => Center(child: Text('Error: $err')),
+          ),
+        ],
       ),
       floatingActionButton: FloatingActionButton(
         onPressed: () {
-          Navigator.of(context).push(
-            MaterialPageRoute(builder: (context) => const AddStudentScreen()),
-          );
+          Navigator.of(context).push(MaterialPageRoute(builder: (_) => const AddStudentScreen()));
         },
         child: const Icon(Icons.add),
       ),
+    );
+  }
+
+  Widget _buildConnectivityBanner(AsyncValue<List<ConnectivityResult>> connectivityAsync) {
+    return connectivityAsync.when(
+      data: (results) {
+        final isOffline = results.contains(ConnectivityResult.none);
+        if (isOffline) {
+          return Container(
+            color: Colors.orange.shade800,
+            padding: const EdgeInsets.symmetric(vertical: 4),
+            width: double.infinity,
+            child: const Text(
+              'Offline Mode - Using Cached Data',
+              textAlign: TextAlign.center,
+              style: TextStyle(color: Colors.white, fontSize: 12),
+            ),
+          );
+        }
+        return const SizedBox.shrink();
+      },
+      loading: () => const SizedBox.shrink(),
+      error: (_, __) => const SizedBox.shrink(),
     );
   }
 }

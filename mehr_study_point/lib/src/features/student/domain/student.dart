@@ -59,7 +59,7 @@ class Student extends Equatable {
       address: map['address'] as String,
       admissionDate: DateTime.parse(map['admission_date'] as String),
       isActive: map['is_active'] as bool,
-      assigned_seat_id: map['assigned_seat_id'] as String?,
+      assignedSeatId: map['assigned_seat_id'] as String?,
     );
   }
 

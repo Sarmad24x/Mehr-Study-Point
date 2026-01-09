@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:mask_text_input_formatter/mask_text_input_formatter.dart';
 import 'package:uuid/uuid.dart';
 
 import '../data/student_providers.dart';
@@ -21,6 +22,11 @@ class _AddStudentScreenState extends ConsumerState<AddStudentScreen> {
   final _guardianContactController = TextEditingController();
   final _addressController = TextEditingController();
 
+  final _phoneMask = MaskTextInputFormatter(
+    mask: '####-#######',
+    filter: {"#": RegExp(r'[0-9]')},
+  );
+
   bool _isLoading = false;
 
   Future<void> _addStudent() async {
@@ -40,14 +46,17 @@ class _AddStudentScreenState extends ConsumerState<AddStudentScreen> {
 
       try {
         await ref.read(studentRepositoryProvider).createStudent(newStudent);
-        ref.invalidate(studentListControllerProvider); // Refreshes the student list
+        ref.invalidate(studentListControllerProvider);
         if (mounted) {
           Navigator.of(context).pop();
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Student added successfully!'), backgroundColor: Colors.green),
+          );
         }
       } catch (e) {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('Failed to add student: $e')),
+            SnackBar(content: Text('Failed to add student: $e'), backgroundColor: Colors.red),
           );
         }
       } finally {
@@ -70,10 +79,12 @@ class _AddStudentScreenState extends ConsumerState<AddStudentScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final border = OutlineInputBorder(borderRadius: BorderRadius.circular(12));
+
     return Scaffold(
       appBar: AppBar(title: const Text('Add New Student')),
       body: SingleChildScrollView(
-        padding: const EdgeInsets.all(16.0),
+        padding: const EdgeInsets.all(24.0),
         child: Form(
           key: _formKey,
           child: Column(
@@ -81,39 +92,72 @@ class _AddStudentScreenState extends ConsumerState<AddStudentScreen> {
             children: [
               TextFormField(
                 controller: _fullNameController,
-                decoration: const InputDecoration(labelText: 'Full Name'),
-                validator: (v) => v!.isEmpty ? 'Required' : null,
+                decoration: InputDecoration(
+                  labelText: 'Full Name',
+                  prefixIcon: const Icon(Icons.person),
+                  border: border,
+                ),
+                validator: (v) => v!.isEmpty ? 'Please enter full name' : null,
               ),
               const SizedBox(height: 16),
               TextFormField(
                 controller: _contactNumberController,
-                decoration: const InputDecoration(labelText: 'Contact Number'),
+                inputFormatters: [_phoneMask],
+                decoration: InputDecoration(
+                  labelText: 'Contact Number',
+                  hintText: '03XX-XXXXXXX',
+                  prefixIcon: const Icon(Icons.phone),
+                  border: border,
+                ),
                 keyboardType: TextInputType.phone,
-                 validator: (v) => v!.isEmpty ? 'Required' : null,
+                validator: (v) => v!.length < 12 ? 'Enter valid phone number' : null,
               ),
               const SizedBox(height: 16),
               TextFormField(
                 controller: _addressController,
-                decoration: const InputDecoration(labelText: 'Address'),
-                 validator: (v) => v!.isEmpty ? 'Required' : null,
+                maxLines: 2,
+                decoration: InputDecoration(
+                  labelText: 'Address',
+                  prefixIcon: const Icon(Icons.location_on),
+                  border: border,
+                ),
+                validator: (v) => v!.isEmpty ? 'Address is required' : null,
               ),
-              const SizedBox(height: 16),
+              const Padding(
+                padding: EdgeInsets.symmetric(vertical: 16.0),
+                child: Divider(),
+              ),
               TextFormField(
                 controller: _guardianNameController,
-                decoration: const InputDecoration(labelText: 'Guardian Name (Optional)'),
+                decoration: InputDecoration(
+                  labelText: 'Guardian Name (Optional)',
+                  prefixIcon: const Icon(Icons.supervisor_account),
+                  border: border,
+                ),
               ),
               const SizedBox(height: 16),
               TextFormField(
                 controller: _guardianContactController,
-                decoration: const InputDecoration(labelText: 'Guardian Contact (Optional)'),
+                inputFormatters: [_phoneMask],
+                decoration: InputDecoration(
+                  labelText: 'Guardian Contact (Optional)',
+                  prefixIcon: const Icon(Icons.phone_android),
+                  border: border,
+                ),
                 keyboardType: TextInputType.phone,
               ),
-              const SizedBox(height: 32),
+              const SizedBox(height: 40),
               _isLoading
                   ? const Center(child: CircularProgressIndicator())
                   : ElevatedButton(
+                      style: ElevatedButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(vertical: 16),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                        backgroundColor: Colors.blue.shade700,
+                        foregroundColor: Colors.white,
+                      ),
                       onPressed: _addStudent,
-                      child: const Text('Save Student'),
+                      child: const Text('Save Student', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
                     ),
             ],
           ),
