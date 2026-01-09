@@ -1,17 +1,31 @@
 import 'package:equatable/equatable.dart';
+import 'package:hive/hive.dart';
 
+part 'fee.g.dart';
+
+@HiveType(typeId: 3)
 enum FeeStatus {
+  @HiveField(0)
   pending,
+  @HiveField(1)
   paid,
+  @HiveField(2)
   overdue,
 }
 
+@HiveType(typeId: 4)
 class Fee extends Equatable {
+  @HiveField(0)
   final String id;
+  @HiveField(1)
   final String studentId;
+  @HiveField(2)
   final double amount;
+  @HiveField(3)
   final DateTime dueDate;
+  @HiveField(4)
   final DateTime? paidDate;
+  @HiveField(5)
   final FeeStatus status;
 
   const Fee({
@@ -42,7 +56,7 @@ class Fee extends Equatable {
 
   Map<String, dynamic> toMap() {
     return {
-      // id is handled by the database
+      'id': id,
       'student_id': studentId,
       'amount': amount,
       'due_date': dueDate.toIso8601String(),

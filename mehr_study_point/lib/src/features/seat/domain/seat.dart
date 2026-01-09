@@ -1,17 +1,30 @@
 import 'package:equatable/equatable.dart';
+import 'package:hive/hive.dart';
 
+part 'seat.g.dart';
+
+@HiveType(typeId: 1)
 enum SeatStatus {
+  @HiveField(0)
   available,
+  @HiveField(1)
   reserved,
+  @HiveField(2)
   maintenance,
 }
 
+@HiveType(typeId: 2)
 class Seat extends Equatable {
+  @HiveField(0)
   final String id;
+  @HiveField(1)
   final int seatNumber;
+  @HiveField(2)
   final SeatStatus status;
+  @HiveField(3)
   final String? zone;
-  final String? studentId; // The ID of the student who has reserved the seat
+  @HiveField(4)
+  final String? studentId;
 
   const Seat({
     required this.id,
