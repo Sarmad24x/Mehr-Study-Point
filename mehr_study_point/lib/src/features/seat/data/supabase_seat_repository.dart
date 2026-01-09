@@ -34,7 +34,7 @@ class SupabaseSeatRepository implements SeatRepository {
       await _client
           .from(_table)
           .update({'status': status.toString().split('.').last})
-          .in_('id', seatIds);
+          .inFilter('id', seatIds);
     } catch (e) {
       throw Exception('Failed to update multiple seat statuses: $e');
     }
