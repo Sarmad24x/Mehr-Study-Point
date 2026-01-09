@@ -9,5 +9,6 @@ import 'supabase_student_repository.dart';
 ///
 final studentRepositoryProvider = Provider<StudentRepository>((ref) {
   final supabaseClient = ref.watch(supabaseClientProvider);
-  return SupabaseStudentRepository(supabaseClient);
+  final auditRepository = ref.watch(auditRepositoryProvider);
+  return SupabaseStudentRepository(supabaseClient, auditRepository);
 });

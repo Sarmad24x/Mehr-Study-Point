@@ -9,5 +9,6 @@ import 'supabase_seat_assignment_repository.dart';
 ///
 final seatAssignmentRepositoryProvider = Provider<SeatAssignmentRepository>((ref) {
   final supabaseClient = ref.watch(supabaseClientProvider);
-  return SupabaseSeatAssignmentRepository(supabaseClient);
+  final auditRepository = ref.watch(auditRepositoryProvider);
+  return SupabaseSeatAssignmentRepository(supabaseClient, auditRepository);
 });
