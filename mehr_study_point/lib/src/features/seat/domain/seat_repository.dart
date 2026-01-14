@@ -9,4 +9,7 @@ abstract class SeatRepository {
 
   /// Updates the status of multiple seats.
   Future<void> updateMultipleSeatStatuses(List<String> seatIds, SeatStatus status);
+
+  /// Adds a specified number of new seats to the library.
+  Future<void> addSeats(int count);
 }

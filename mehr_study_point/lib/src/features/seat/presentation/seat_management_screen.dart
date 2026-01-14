@@ -17,15 +17,6 @@ class _SeatManagementScreenState extends ConsumerState<SeatManagementScreen> {
 
   bool get _isSelectionMode => _selectedSeatIds.isNotEmpty;
 
-  @override
-  void didUpdateWidget(covariant SeatManagementScreen oldWidget) {
-    super.didUpdateWidget(oldWidget);
-    // Clear selection if filter or search changes
-    if (_isSelectionMode) {
-      WidgetsBinding.instance.addPostFrameCallback((_) => _clearSelection());
-    }
-  }
-
   void _onSeatTap(Seat seat) {
     if (_isSelectionMode) {
       setState(() {
@@ -77,6 +68,46 @@ class _SeatManagementScreenState extends ConsumerState<SeatManagementScreen> {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('Failed to update seats: $e')),
         );
+      }
+    }
+  }
+
+  Future<void> _showAddSeatsDialog() async {
+    final controller = TextEditingController();
+    final count = await showDialog<int>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Add More Seats'),
+        content: TextField(
+          controller: controller,
+          keyboardType: TextInputType.number,
+          decoration: const InputDecoration(labelText: 'Number of seats to add'),
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancel')),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(context, int.tryParse(controller.text)),
+            child: const Text('Add'),
+          ),
+        ],
+      ),
+    );
+
+    if (count != null && count > 0 && mounted) {
+      try {
+        await ref.read(seatRepositoryProvider).addSeats(count);
+        ref.invalidate(seatListControllerProvider);
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Successfully added $count seats')),
+          );
+        }
+      } catch (e) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Error adding seats: $e')),
+          );
+        }
       }
     }
   }
@@ -158,6 +189,13 @@ class _SeatManagementScreenState extends ConsumerState<SeatManagementScreen> {
         ),
         style: const TextStyle(color: Colors.white),
       ),
+      actions: [
+        IconButton(
+          icon: const Icon(Icons.add_box),
+          tooltip: 'Add Seats',
+          onPressed: _showAddSeatsDialog,
+        ),
+      ],
     );
   }
 

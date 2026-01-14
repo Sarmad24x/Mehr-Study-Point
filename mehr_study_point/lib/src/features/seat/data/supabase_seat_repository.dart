@@ -91,4 +91,36 @@ class SupabaseSeatRepository implements SeatRepository {
       throw Exception('Failed to update multiple seat statuses: $e');
     }
   }
+
+  @override
+  Future<void> addSeats(int count) async {
+    try {
+      // 1. Get the current highest seat number
+      final response = await _client
+          .from(_table)
+          .select('seat_number')
+          .order('seat_number', ascending: false)
+          .limit(1)
+          .maybeSingle();
+      
+      int nextSeatNumber = 1;
+      if (response != null) {
+        nextSeatNumber = (response['seat_number'] as int) + 1;
+      }
+
+      // 2. Prepare new seats
+      final List<Map<String, dynamic>> newSeats = [];
+      for (int i = 0; i < count; i++) {
+        newSeats.add({
+          'seat_number': nextSeatNumber + i,
+          'status': 'available',
+        });
+      }
+
+      // 3. Insert into Supabase
+      await _client.from(_table).insert(newSeats);
+    } catch (e) {
+      throw Exception('Failed to add more seats: $e');
+    }
+  }
 }

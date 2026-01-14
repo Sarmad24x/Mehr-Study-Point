@@ -4,9 +4,12 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 
 import '../../auth/data/auth_providers.dart';
+import '../../auth/domain/app_user.dart';
+import '../../auth/presentation/auth_controller.dart';
 import '../../seat/presentation/seat_management_screen.dart';
 import '../../seat_assignment/presentation/seat_assignment_screen.dart';
 import '../../student/presentation/student_list_screen.dart';
+import '../../settings/presentation/settings_screen.dart';
 import '../domain/dashboard_stats.dart';
 import 'dashboard_controller.dart';
 
@@ -16,26 +19,41 @@ class DashboardScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final statsAsync = ref.watch(dashboardControllerProvider);
+    final userProfileAsync = ref.watch(userProfileProvider);
 
     return Scaffold(
       backgroundColor: Colors.grey.shade50,
       appBar: AppBar(
         title: const Text('Admin Dashboard'),
         actions: [
+          userProfileAsync.when(
+            data: (user) {
+              if (user != null && (user.role == UserRole.admin || user.role == UserRole.superAdmin)) {
+                return IconButton(
+                  icon: const Icon(Icons.settings_outlined),
+                  tooltip: 'Settings',
+                  onPressed: () => Navigator.of(context).push(
+                    MaterialPageRoute(builder: (_) => const SettingsScreen()),
+                  ),
+                );
+              }
+              return const SizedBox.shrink();
+            },
+            loading: () => const SizedBox.shrink(),
+            error: (_, __) => const SizedBox.shrink(),
+          ),
           IconButton(
             icon: const Icon(Icons.logout),
             tooltip: 'Logout',
             onPressed: () => ref.read(authRepositoryProvider).signOut(),
           ),
-          IconButton(
-            icon: const Icon(Icons.refresh),
-            tooltip: 'Refresh Stats',
-            onPressed: () => ref.invalidate(dashboardControllerProvider),
-          ),
         ],
       ),
       body: statsAsync.when(
-        data: (stats) => _buildDashboardBody(context, stats),
+        data: (stats) => RefreshIndicator(
+          onRefresh: () => ref.refresh(dashboardControllerProvider.future),
+          child: _buildDashboardBody(context, stats),
+        ),
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (err, stack) => Center(
           child: Padding(
@@ -89,14 +107,14 @@ class DashboardScreen extends ConsumerWidget {
                     PieChartSectionData(
                       color: Colors.blue.shade600,
                       value: stats.reservedSeats.toDouble(),
-                      title: '${((stats.reservedSeats / stats.totalSeats) * 100).toStringAsFixed(0)}%',
+                      title: '${((stats.reservedSeats / (stats.totalSeats == 0 ? 1 : stats.totalSeats)) * 100).toStringAsFixed(0)}%',
                       radius: 40,
                       titleStyle: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.white),
                     ),
                     PieChartSectionData(
                       color: Colors.green.shade400,
                       value: stats.availableSeats.toDouble(),
-                      title: '${((stats.availableSeats / stats.totalSeats) * 100).toStringAsFixed(0)}%',
+                      title: '${((stats.availableSeats / (stats.totalSeats == 0 ? 1 : stats.totalSeats)) * 100).toStringAsFixed(0)}%',
                       radius: 40,
                       titleStyle: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.white),
                     ),
