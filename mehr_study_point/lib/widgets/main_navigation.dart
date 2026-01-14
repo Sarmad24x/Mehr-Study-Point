@@ -5,6 +5,7 @@ import '../screens/dashboard/dashboard_screen.dart';
 import '../screens/seats/seat_management_screen.dart';
 import '../screens/students/student_list_screen.dart';
 import '../screens/fees/fee_management_screen.dart';
+import '../screens/settings/settings_screen.dart';
 import '../models/user_model.dart';
 
 class MainNavigation extends ConsumerStatefulWidget {
@@ -27,7 +28,7 @@ class _MainNavigationState extends ConsumerState<MainNavigation> {
       const SeatManagementScreen(),
       const StudentListScreen(),
       if (isAdmin) const FeeManagementScreen(),
-      if (isAdmin) const Center(child: Text('Settings Screen')),
+      const SettingsScreen(),
     ];
 
     return Scaffold(
@@ -64,12 +65,12 @@ class _MainNavigationState extends ConsumerState<MainNavigation> {
               selectedIcon: Icon(Icons.account_balance_wallet),
               label: 'Fees',
             ),
-            const NavigationDestination(
-              icon: Icon(Icons.settings_outlined),
-              selectedIcon: Icon(Icons.settings),
-              label: 'Settings',
-            ),
           ],
+          const NavigationDestination(
+            icon: Icon(Icons.settings_outlined),
+            selectedIcon: Icon(Icons.settings),
+            label: 'Settings',
+          ),
         ],
       ),
     );
