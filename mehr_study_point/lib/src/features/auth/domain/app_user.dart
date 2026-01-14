@@ -1,6 +1,6 @@
 import 'package:equatable/equatable.dart';
 
-enum UserRole { admin, superAdmin, employee }
+enum UserRole { admin, employee }
 
 class AppUser extends Equatable {
   final String id;
@@ -36,8 +36,8 @@ class AppUser extends Equatable {
   Map<String, dynamic> toMap() {
     return {
       'id': id,
-      'email': email,
       'full_name': fullName,
+      'email': email,
       'role': role.name,
       'is_active': isActive,
     };

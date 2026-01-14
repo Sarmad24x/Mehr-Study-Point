@@ -70,7 +70,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
         data: (user) {
           if (user == null) return const Center(child: Text('User profile not found.'));
           
-          final isAdmin = user.role == UserRole.admin || user.role == UserRole.superAdmin;
+          final isAdmin = user.role == UserRole.admin;
 
           return SingleChildScrollView(
             padding: const EdgeInsets.all(24.0),

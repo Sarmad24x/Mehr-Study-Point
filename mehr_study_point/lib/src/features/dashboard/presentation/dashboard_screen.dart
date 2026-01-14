@@ -28,7 +28,7 @@ class DashboardScreen extends ConsumerWidget {
         actions: [
           userProfileAsync.when(
             data: (user) {
-              if (user != null && (user.role == UserRole.admin || user.role == UserRole.superAdmin)) {
+              if (user != null && user.role == UserRole.admin) {
                 return IconButton(
                   icon: const Icon(Icons.settings_outlined),
                   tooltip: 'Settings',
