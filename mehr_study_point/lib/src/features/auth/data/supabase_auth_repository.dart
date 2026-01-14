@@ -18,6 +18,27 @@ class SupabaseAuthRepository implements AuthRepository {
   }
 
   @override
+  Future<void> signUpWithEmailAndPassword({
+    required String email,
+    required String password,
+    required String fullName,
+    UserRole role = UserRole.employee,
+  }) async {
+    try {
+      await _client.auth.signUp(
+        email: email,
+        password: password,
+        data: {
+          'full_name': fullName,
+          'role': role.name,
+        },
+      );
+    } catch (e) {
+      throw Exception('Failed to sign up: $e');
+    }
+  }
+
+  @override
   Future<void> signOut() {
     return _client.auth.signOut();
   }
@@ -31,7 +52,6 @@ class SupabaseAuthRepository implements AuthRepository {
       final response = await _client.from(_table).select().eq('id', user.id).single();
       return AppUser.fromMap(response);
     } catch (e) {
-      // If the profile doesn't exist yet, we might want to create it or return null
       return null;
     }
   }
@@ -43,18 +63,6 @@ class SupabaseAuthRepository implements AuthRepository {
       return (response as List).map((item) => AppUser.fromMap(item)).toList();
     } catch (e) {
       throw Exception('Failed to fetch users: $e');
-    }
-  }
-
-  @override
-  Future<void> createUser(AppUser user) async {
-    // Note: Creating a user in Supabase Auth requires the Admin SDK or a custom edge function.
-    // For this example, we're assuming the user is already created in Auth,
-    // and we're just adding their profile record.
-    try {
-      await _client.from(_table).insert(user.toMap());
-    } catch (e) {
-      throw Exception('Failed to create user profile: $e');
     }
   }
 

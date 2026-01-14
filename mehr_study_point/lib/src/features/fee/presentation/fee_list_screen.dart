@@ -4,6 +4,7 @@ import 'package:intl/intl.dart';
 
 import '../data/fee_providers.dart';
 import '../domain/fee.dart';
+import 'add_fee_screen.dart';
 import 'fee_list_controller.dart';
 
 class FeeListScreen extends ConsumerWidget {
@@ -29,8 +30,8 @@ class FeeListScreen extends ConsumerWidget {
       studentId: fee.studentId,
       amount: fee.amount,
       dueDate: fee.dueDate,
-      status: FeeStatus.paid, // Change status
-      paidDate: DateTime.now(), // Set paid date
+      status: FeeStatus.paid,
+      paidDate: DateTime.now(),
     );
 
     try {
@@ -95,7 +96,11 @@ class FeeListScreen extends ConsumerWidget {
       ),
       floatingActionButton: FloatingActionButton(
         onPressed: () {
-          // TODO: Implement Add Fee Screen
+          Navigator.of(context).push(
+            MaterialPageRoute(
+              builder: (context) => AddFeeScreen(studentId: studentId, studentName: studentName),
+            ),
+          );
         },
         child: const Icon(Icons.add),
         tooltip: 'Add Manual Fee',

@@ -5,6 +5,14 @@ abstract class AuthRepository {
   /// Signs in the user with the given email and password.
   Future<void> signInWithEmailAndPassword(String email, String password);
 
+  /// Registers a new user with email, password, and full name.
+  Future<void> signUpWithEmailAndPassword({
+    required String email,
+    required String password,
+    required String fullName,
+    UserRole role = UserRole.employee,
+  });
+
   /// Signs out the current user.
   Future<void> signOut();
 
@@ -14,12 +22,9 @@ abstract class AuthRepository {
   /// Fetches the profile data for the currently logged-in user.
   Future<AppUser?> getCurrentUser();
 
-  /// (SuperAdmin only) Fetches all users in the system.
+  /// (Admin only) Fetches all users in the system.
   Future<List<AppUser>> getAllUsers();
 
-  /// (SuperAdmin only) Creates a new user account.
-  Future<void> createUser(AppUser user);
-
-  /// (SuperAdmin only) Updates an existing user's data (e.g., role, status).
+  /// (Admin only) Updates an existing user's data (e.g., role, status).
   Future<void> updateUser(AppUser user);
 }
