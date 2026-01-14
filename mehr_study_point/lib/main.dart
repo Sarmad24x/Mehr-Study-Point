@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'services/hive_service.dart';
 import 'screens/auth/login_screen.dart';
 import 'providers/auth_provider.dart';
+import 'widgets/main_navigation.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -46,10 +47,8 @@ class AuthChecker extends ConsumerWidget {
     return authState.when(
       data: (user) {
         if (user != null) {
-          // User is logged in
-          return const DashboardWrapper();
+          return const ProfileLoader();
         }
-        // User is not logged in
         return const LoginScreen();
       },
       loading: () => const Scaffold(
@@ -62,9 +61,8 @@ class AuthChecker extends ConsumerWidget {
   }
 }
 
-// Temporary Wrapper until Dashboard is built
-class DashboardWrapper extends ConsumerWidget {
-  const DashboardWrapper({super.key});
+class ProfileLoader extends ConsumerWidget {
+  const ProfileLoader({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -77,27 +75,7 @@ class DashboardWrapper extends ConsumerWidget {
             body: Center(child: Text('Profile not found in database.')),
           );
         }
-        return Scaffold(
-          appBar: AppBar(
-            title: Text('Welcome, ${profile.name}'),
-            actions: [
-              IconButton(
-                icon: const Icon(Icons.logout),
-                onPressed: () => ref.read(authServiceProvider).signOut(),
-              ),
-            ],
-          ),
-          body: Center(
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Text('Role: ${profile.role.name.toUpperCase()}'),
-                const SizedBox(height: 20),
-                const Text('Dashboard Coming Soon...'),
-              ],
-            ),
-          ),
-        );
+        return const MainNavigation();
       },
       loading: () => const Scaffold(
         body: Center(child: CircularProgressIndicator()),
