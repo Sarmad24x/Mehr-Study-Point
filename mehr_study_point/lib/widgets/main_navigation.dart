@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../providers/auth_provider.dart';
 import '../screens/dashboard/dashboard_screen.dart';
+import '../screens/seats/seat_management_screen.dart';
 
 class MainNavigation extends ConsumerStatefulWidget {
   const MainNavigation({super.key});
@@ -13,16 +14,16 @@ class MainNavigation extends ConsumerStatefulWidget {
 class _MainNavigationState extends ConsumerState<MainNavigation> {
   int _selectedIndex = 0;
 
-  // Placeholder screens - we will create these files next
+  // Screens
   static const List<Widget> _employeeScreens = [
     DashboardScreen(),
-    Center(child: Text('Seats Screen')),
+    SeatManagementScreen(),
     Center(child: Text('Students Screen')),
   ];
 
   static const List<Widget> _adminScreens = [
     DashboardScreen(),
-    Center(child: Text('Seats Screen')),
+    SeatManagementScreen(),
     Center(child: Text('Students Screen')),
     Center(child: Text('Fees Screen')),
     Center(child: Text('Settings Screen')),
