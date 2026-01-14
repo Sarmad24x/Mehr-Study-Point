@@ -4,11 +4,21 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'services/hive_service.dart';
 import 'screens/auth/login_screen.dart';
 import 'providers/auth_provider.dart';
+import 'providers/service_providers.dart';
 import 'widgets/main_navigation.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  await Firebase.initializeApp();
+  
+  try {
+    // Initialize Firebase
+    await Firebase.initializeApp();
+    debugPrint("Firebase initialized successfully");
+  } catch (e) {
+    debugPrint("Firebase initialization failed: $e");
+  }
+
+  // Initialize Hive
   final hiveService = HiveService();
   await hiveService.init();
 
@@ -55,7 +65,7 @@ class AuthChecker extends ConsumerWidget {
         body: Center(child: CircularProgressIndicator()),
       ),
       error: (e, stack) => Scaffold(
-        body: Center(child: Text('Error: $e')),
+        body: Center(child: Text('Auth Error: $e')),
       ),
     );
   }
@@ -71,8 +81,21 @@ class ProfileLoader extends ConsumerWidget {
     return userProfile.when(
       data: (profile) {
         if (profile == null) {
-          return const Scaffold(
-            body: Center(child: Text('Profile not found in database.')),
+          return Scaffold(
+            appBar: AppBar(title: const Text('Profile Error')),
+            body: Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  const Text('User logged in but profile not found in Firestore.'),
+                  const SizedBox(height: 20),
+                  ElevatedButton(
+                    onPressed: () => ref.read(authServiceProvider).signOut(),
+                    child: const Text('Sign Out'),
+                  ),
+                ],
+              ),
+            ),
           );
         }
         return const MainNavigation();
@@ -81,7 +104,7 @@ class ProfileLoader extends ConsumerWidget {
         body: Center(child: CircularProgressIndicator()),
       ),
       error: (e, _) => Scaffold(
-        body: Center(child: Text('Error loading profile: $e')),
+        body: Center(child: Text('Profile Loading Error: $e')),
       ),
     );
   }
