@@ -3,6 +3,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../providers/auth_provider.dart';
 import '../screens/dashboard/dashboard_screen.dart';
 import '../screens/seats/seat_management_screen.dart';
+import '../screens/students/student_list_screen.dart';
+import '../screens/fees/fee_management_screen.dart';
+import '../models/user_model.dart';
 
 class MainNavigation extends ConsumerStatefulWidget {
   const MainNavigation({super.key});
@@ -14,26 +17,18 @@ class MainNavigation extends ConsumerStatefulWidget {
 class _MainNavigationState extends ConsumerState<MainNavigation> {
   int _selectedIndex = 0;
 
-  // Screens
-  static const List<Widget> _employeeScreens = [
-    DashboardScreen(),
-    SeatManagementScreen(),
-    Center(child: Text('Students Screen')),
-  ];
-
-  static const List<Widget> _adminScreens = [
-    DashboardScreen(),
-    SeatManagementScreen(),
-    Center(child: Text('Students Screen')),
-    Center(child: Text('Fees Screen')),
-    Center(child: Text('Settings Screen')),
-  ];
-
   @override
   Widget build(BuildContext context) {
     final userProfile = ref.watch(userProfileProvider).value;
     final isAdmin = userProfile?.role == UserRole.admin;
-    final screens = isAdmin ? _adminScreens : _employeeScreens;
+
+    final List<Widget> screens = [
+      const DashboardScreen(),
+      const SeatManagementScreen(),
+      const StudentListScreen(),
+      if (isAdmin) const FeeManagementScreen(),
+      if (isAdmin) const Center(child: Text('Settings Screen')),
+    ];
 
     return Scaffold(
       body: IndexedStack(
