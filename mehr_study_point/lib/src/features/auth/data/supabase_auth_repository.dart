@@ -48,12 +48,13 @@ class SupabaseAuthRepository implements AuthRepository {
     final user = _client.auth.currentUser;
     if (user == null) return null;
 
-    try {
-      final response = await _client.from(_table).select().eq('id', user.id).single();
-      return AppUser.fromMap(response);
-    } catch (e) {
+    final response = await _client.from(_table).select().eq('id', user.id).maybeSingle();
+    
+    if (response == null) {
       return null;
     }
+    
+    return AppUser.fromMap(response);
   }
 
   @override

@@ -26,7 +26,7 @@ class AppUser extends Equatable {
       email: map['email'] as String,
       fullName: map['full_name'] as String,
       role: UserRole.values.firstWhere(
-        (e) => e.name == (map['role'] as String).toLowerCase(),
+        (e) => e.name.toLowerCase() == (map['role'] as String).toLowerCase().trim(),
         orElse: () => UserRole.employee,
       ),
       isActive: map['is_active'] as bool? ?? true,

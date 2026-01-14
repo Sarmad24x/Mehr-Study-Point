@@ -16,13 +16,9 @@ final authControllerProvider = StreamProvider.autoDispose<User?>((ref) {
 final userProfileProvider = FutureProvider.autoDispose<AppUser?>((ref) async {
   final authState = ref.watch(authControllerProvider);
   
-  return authState.when(
-    data: (user) async {
-      if (user == null) return null;
-      final authRepository = ref.read(authRepositoryProvider);
-      return await authRepository.getCurrentUser();
-    },
-    loading: () => null,
-    error: (_, __) => null,
-  );
+  final user = authState.value;
+  if (user == null) return null;
+
+  final authRepository = ref.read(authRepositoryProvider);
+  return await authRepository.getCurrentUser();
 });
