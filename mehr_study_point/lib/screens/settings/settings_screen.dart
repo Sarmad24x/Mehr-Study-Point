@@ -3,6 +3,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/user_provider.dart';
 import '../../providers/service_providers.dart';
+import '../../providers/student_provider.dart';
+import '../../providers/fee_provider.dart';
 import '../../models/user_model.dart';
 
 class SettingsScreen extends ConsumerWidget {
@@ -12,6 +14,8 @@ class SettingsScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final userProfile = ref.watch(userProfileProvider).value;
     final usersAsync = ref.watch(usersStreamProvider);
+    final students = ref.watch(studentsStreamProvider).value ?? [];
+    final fees = ref.watch(feesStreamProvider).value ?? [];
 
     return Scaffold(
       appBar: AppBar(
@@ -46,6 +50,46 @@ class SettingsScreen extends ConsumerWidget {
             const SizedBox(height: 32),
             if (userProfile?.role == UserRole.admin) ...[
               const Text(
+                'Admin Tools',
+                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+              ),
+              const SizedBox(height: 8),
+              Card(
+                child: Column(
+                  children: [
+                    ListTile(
+                      leading: const Icon(Icons.grid_view),
+                      title: const Text('Initialize 160 Seats'),
+                      subtitle: const Text('Run this once to set up the library grid'),
+                      onTap: () async {
+                        final confirm = await _showConfirmDialog(context, 'Initialize Seats?');
+                        if (confirm == true) {
+                          await ref.read(seatServiceProvider).generateInitialSeats();
+                          if (context.mounted) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(content: Text('Seats initialized!')),
+                            );
+                          }
+                        }
+                      },
+                    ),
+                    const Divider(height: 1),
+                    ListTile(
+                      leading: const Icon(Icons.download),
+                      title: const Text('Export Students (CSV)'),
+                      onTap: () => ref.read(exportServiceProvider).exportStudentsToCSV(students),
+                    ),
+                    const Divider(height: 1),
+                    ListTile(
+                      leading: const Icon(Icons.receipt_long),
+                      title: const Text('Export Fees (CSV)'),
+                      onTap: () => ref.read(exportServiceProvider).exportFeesToCSV(fees),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 32),
+              const Text(
                 'User Management (Employees)',
                 style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
               ),
@@ -79,7 +123,6 @@ class SettingsScreen extends ConsumerWidget {
               const SizedBox(height: 16),
               ElevatedButton.icon(
                 onPressed: () {
-                  // Show Add Employee Dialog
                   _showAddUserDialog(context, ref);
                 },
                 icon: const Icon(Icons.add),
@@ -92,11 +135,23 @@ class SettingsScreen extends ConsumerWidget {
     );
   }
 
+  Future<bool?> _showConfirmDialog(BuildContext context, String title) {
+    return showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text(title),
+        content: const Text('This will add 160 seats to your database if they don\'t exist.'),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Cancel')),
+          TextButton(onPressed: () => Navigator.pop(context, true), child: const Text('Confirm')),
+        ],
+      ),
+    );
+  }
+
   void _showAddUserDialog(BuildContext context, WidgetRef ref) {
     final nameController = TextEditingController();
     final emailController = TextEditingController();
-    // In a real app, you'd use Firebase Admin SDK or a Cloud Function to create users.
-    // For now, we'll just show the requirement.
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
@@ -123,9 +178,8 @@ class SettingsScreen extends ConsumerWidget {
           ),
           ElevatedButton(
             onPressed: () async {
-              // Logic to save user profile to Firestore collection 'users'
               final user = UserModel(
-                id: emailController.text, // Temporary ID logic
+                id: emailController.text,
                 email: emailController.text,
                 name: nameController.text,
                 role: UserRole.employee,

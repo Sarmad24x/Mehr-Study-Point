@@ -4,6 +4,7 @@ import '../services/hive_service.dart';
 import '../services/seat_service.dart';
 import '../services/student_service.dart';
 import '../services/fee_service.dart';
+import '../services/export_service.dart';
 
 // Provider for AuthService
 final authServiceProvider = Provider<AuthService>((ref) {
@@ -28,4 +29,9 @@ final studentServiceProvider = Provider<StudentService>((ref) {
 // Provider for FeeService
 final feeServiceProvider = Provider<FeeService>((ref) {
   return FeeService(ref.watch(hiveServiceProvider));
+});
+
+// Provider for ExportService
+final exportServiceProvider = Provider<ExportService>((ref) {
+  return ExportService();
 });
