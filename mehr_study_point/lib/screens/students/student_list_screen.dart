@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../providers/student_provider.dart';
 import 'add_student_screen.dart';
+import 'student_details_screen.dart';
 
 class StudentListScreen extends ConsumerWidget {
   const StudentListScreen({super.key});
@@ -54,7 +55,12 @@ class StudentListScreen extends ConsumerWidget {
                   subtitle: Text('Seat: ${student.assignedSeatNumber ?? 'None'}'),
                   trailing: const Icon(Icons.chevron_right),
                   onTap: () {
-                    // Show student details
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => StudentDetailsScreen(student: student),
+                      ),
+                    );
                   },
                 ),
               );
