@@ -2,8 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 import '../../models/student_model.dart';
+import '../../models/seat_model.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/service_providers.dart';
+import '../../providers/seat_provider.dart';
 import 'add_student_screen.dart';
 
 class StudentDetailsScreen extends ConsumerWidget {
@@ -53,7 +55,7 @@ class StudentDetailsScreen extends ConsumerWidget {
             const SizedBox(height: 24),
             _buildInfoCard(context),
             const SizedBox(height: 24),
-            _buildSeatCard(context),
+            _buildSeatCard(context, ref, currentUser),
             const SizedBox(height: 24),
             _buildGuardianCard(context),
           ],
@@ -82,19 +84,77 @@ class StudentDetailsScreen extends ConsumerWidget {
     );
   }
 
-  Widget _buildSeatCard(BuildContext context) {
+  Widget _buildSeatCard(BuildContext context, WidgetRef ref, dynamic currentUser) {
     return Card(
       child: ListTile(
         leading: const Icon(Icons.event_seat, color: Colors.blue),
         title: const Text('Assigned Seat', style: TextStyle(fontWeight: FontWeight.bold)),
         subtitle: Text('Seat Number: ${student.assignedSeatNumber ?? 'Not Assigned'}'),
         trailing: TextButton(
-          onPressed: () {
-            // Future: Seat Swap Logic
-          },
+          onPressed: () => _showSwapDialog(context, ref, currentUser),
           child: const Text('SWAP'),
         ),
       ),
+    );
+  }
+
+  void _showSwapDialog(BuildContext context, WidgetRef ref, dynamic currentUser) {
+    if (currentUser == null) return;
+
+    final seatsAsync = ref.watch(seatsStreamProvider);
+    final availableSeats = seatsAsync.value?.where((s) => s.status == SeatStatus.available).toList() ?? [];
+
+    showDialog(
+      context: context,
+      builder: (context) {
+        SeatModel? selectedNewSeat;
+        return StatefulBuilder(
+          builder: (context, setState) {
+            return AlertDialog(
+              title: const Text('Swap Seat'),
+              content: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text('Moving ${student.fullName} from Seat ${student.assignedSeatNumber}'),
+                  const SizedBox(height: 16),
+                  DropdownButtonFormField<SeatModel>(
+                    decoration: const InputDecoration(labelText: 'Select New Seat', border: OutlineInputBorder()),
+                    value: selectedNewSeat,
+                    items: availableSeats.map((s) => DropdownMenuItem(value: s, child: Text('Seat ${s.seatNumber}'))).toList(),
+                    onChanged: (val) => setState(() => selectedNewSeat = val),
+                  ),
+                ],
+              ),
+              actions: [
+                TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancel')),
+                ElevatedButton(
+                  onPressed: selectedNewSeat == null
+                      ? null
+                      : () async {
+                          final oldSeat = seatsAsync.value?.firstWhere((s) => s.id == student.assignedSeatId);
+                          if (oldSeat != null) {
+                            await ref.read(seatServiceProvider).swapSeat(
+                                  student: student,
+                                  oldSeat: oldSeat,
+                                  newSeat: selectedNewSeat!,
+                                  currentUser: currentUser,
+                                );
+                            if (context.mounted) {
+                              Navigator.pop(context); // Close dialog
+                              Navigator.pop(context); // Go back to student list to refresh state
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(content: Text('Seat swapped successfully')),
+                              );
+                            }
+                          }
+                        },
+                  child: const Text('Confirm Swap'),
+                ),
+              ],
+            );
+          },
+        );
+      },
     );
   }
 
