@@ -3,9 +3,11 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:uuid/uuid.dart';
 import '../../models/student_model.dart';
 import '../../models/seat_model.dart';
+import '../../models/fee_model.dart';
 import '../../providers/service_providers.dart';
 import '../../providers/seat_provider.dart';
 import '../../providers/auth_provider.dart';
+
 
 class AddStudentScreen extends ConsumerStatefulWidget {
   final StudentModel? student;
@@ -22,6 +24,7 @@ class _AddStudentScreenState extends ConsumerState<AddStudentScreen> {
   late final TextEditingController _guardianNameController;
   late final TextEditingController _guardianContactController;
   late final TextEditingController _addressController;
+  late final TextEditingController _admissionFeeController;
   
   SeatModel? _selectedSeat;
   bool _isLoading = false;
@@ -34,9 +37,7 @@ class _AddStudentScreenState extends ConsumerState<AddStudentScreen> {
     _guardianNameController = TextEditingController(text: widget.student?.guardianName);
     _guardianContactController = TextEditingController(text: widget.student?.guardianContact);
     _addressController = TextEditingController(text: widget.student?.address);
-    
-    // If editing, we might need to handle the seat selection differently 
-    // since the current seat is 'reserved' and might not show in 'available' list.
+    _admissionFeeController = TextEditingController(text: '1000'); // Default Admission Fee
   }
 
   @override
@@ -46,6 +47,7 @@ class _AddStudentScreenState extends ConsumerState<AddStudentScreen> {
     _guardianNameController.dispose();
     _guardianContactController.dispose();
     _addressController.dispose();
+    _admissionFeeController.dispose();
     super.dispose();
   }
 
@@ -67,8 +69,9 @@ class _AddStudentScreenState extends ConsumerState<AddStudentScreen> {
     setState(() => _isLoading = true);
 
     try {
+      final studentId = isEditing ? widget.student!.id : const Uuid().v4();
       final updatedStudent = StudentModel(
-        id: isEditing ? widget.student!.id : const Uuid().v4(),
+        id: studentId,
         fullName: _nameController.text.trim(),
         contactNumber: _contactController.text.trim(),
         guardianName: _guardianNameController.text.trim().isEmpty ? null : _guardianNameController.text.trim(),
@@ -88,6 +91,19 @@ class _AddStudentScreenState extends ConsumerState<AddStudentScreen> {
         );
       } else {
         await ref.read(studentServiceProvider).addStudent(updatedStudent, currentUser);
+        
+        // Mature Fee: Auto-generate Admission Fee record
+        final admissionFeeAmount = double.tryParse(_admissionFeeController.text) ?? 1000.0;
+        final fee = FeeModel(
+          id: const Uuid().v4(),
+          studentId: studentId,
+          amount: admissionFeeAmount,
+          paidAmount: 0.0,
+          dueDate: DateTime.now(),
+          status: FeeStatus.pending,
+          type: 'Admission',
+        );
+        await ref.read(feeServiceProvider).addFee(fee, currentUser);
       }
       
       if (mounted) {
@@ -155,6 +171,12 @@ class _AddStudentScreenState extends ConsumerState<AddStudentScreen> {
                     validator: (value) => value?.isEmpty ?? true ? 'Required' : null,
                   ),
                   if (!isEditing) ...[
+                    const SizedBox(height: 16),
+                    TextFormField(
+                      controller: _admissionFeeController,
+                      decoration: const InputDecoration(labelText: 'Admission Fee (One-time)', border: OutlineInputBorder(), prefixText: 'Rs. '),
+                      keyboardType: TextInputType.number,
+                    ),
                     const SizedBox(height: 24),
                     const Text('Assign Seat*', style: TextStyle(fontWeight: FontWeight.bold)),
                     const SizedBox(height: 8),

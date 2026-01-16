@@ -19,6 +19,13 @@ class FeeManagementScreen extends ConsumerWidget {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Fee Management'),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.playlist_add),
+            tooltip: 'Generate Monthly Fees',
+            onPressed: () => _showBulkGenerateDialog(context, ref),
+          ),
+        ],
         bottom: PreferredSize(
           preferredSize: const Size.fromHeight(60),
           child: Padding(
@@ -27,7 +34,7 @@ class FeeManagementScreen extends ConsumerWidget {
               onChanged: (value) =>
                   ref.read(feeSearchQueryProvider.notifier).state = value,
               decoration: InputDecoration(
-                hintText: 'Search by Status or Student ID...',
+                hintText: 'Search by Status or Student...',
                 prefixIcon: const Icon(Icons.search),
                 filled: true,
                 fillColor: Colors.white,
@@ -55,19 +62,21 @@ class FeeManagementScreen extends ConsumerWidget {
                 orElse: () => throw Exception('Student not found'),
               );
 
+              final remaining = fee.amount - fee.paidAmount;
+
               return Card(
                 child: ListTile(
                   title: Text(student?.fullName ?? 'Unknown Student'),
                   subtitle: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text('Type: ${fee.type} | Amount: Rs. ${fee.amount}'),
+                      Text('Type: ${fee.type} | Total: Rs. ${fee.amount}'),
+                      if (remaining > 0)
+                        Text('Owed: Rs. $remaining', style: const TextStyle(color: Colors.red, fontWeight: FontWeight.bold)),
                       Text(
                         'Due: ${DateFormat('dd MMM yyyy').format(fee.dueDate)}',
                         style: TextStyle(
-                          color: fee.status == FeeStatus.overdue
-                              ? Colors.red
-                              : Colors.grey,
+                          color: fee.status == FeeStatus.overdue ? Colors.red : Colors.grey,
                         ),
                       ),
                     ],
@@ -85,8 +94,52 @@ class FeeManagementScreen extends ConsumerWidget {
     );
   }
 
+  void _showBulkGenerateDialog(BuildContext context, WidgetRef ref) {
+    final amountController = TextEditingController(text: '2000');
+    final currentUser = ref.read(userProfileProvider).value;
+    final students = ref.read(studentsStreamProvider).value ?? [];
+
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Generate Monthly Fees'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Text('This will create a monthly fee record for all ACTIVE students.'),
+            const SizedBox(height: 16),
+            TextField(
+              controller: amountController,
+              keyboardType: TextInputType.number,
+              decoration: const InputDecoration(labelText: 'Monthly Amount', border: OutlineInputBorder(), prefixText: 'Rs. '),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancel')),
+          ElevatedButton(
+            onPressed: () async {
+              if (currentUser == null) return;
+              final amount = double.tryParse(amountController.text) ?? 2000.0;
+              final count = await ref.read(feeServiceProvider).generateMonthlyFees(
+                students, amount, DateTime.now().add(const Duration(days: 5)), currentUser,
+              );
+              if (context.mounted) {
+                Navigator.pop(context);
+                ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Generated $count fee records!')));
+              }
+            },
+            child: const Text('Generate'),
+          ),
+        ],
+      ),
+    );
+  }
+
   void _showPaymentDialog(BuildContext context, WidgetRef ref, FeeModel fee) {
-    final controller = TextEditingController(text: fee.amount.toString());
+    final remaining = fee.amount - fee.paidAmount;
+    final controller = TextEditingController(text: remaining.toString());
+    
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
@@ -94,13 +147,13 @@ class FeeManagementScreen extends ConsumerWidget {
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Text('Enter amount paid by student:'),
+            Text('Student owes Rs. $remaining'),
             const SizedBox(height: 16),
             TextField(
               controller: controller,
               keyboardType: TextInputType.number,
               decoration: const InputDecoration(
-                labelText: 'Amount Paid',
+                labelText: 'Amount Paid Now',
                 border: OutlineInputBorder(),
                 prefixText: 'Rs. ',
               ),
@@ -108,17 +161,14 @@ class FeeManagementScreen extends ConsumerWidget {
           ],
         ),
         actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Cancel'),
-          ),
+          TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancel')),
           ElevatedButton(
             onPressed: () async {
               final currentUser = ref.read(userProfileProvider).value;
               if (currentUser == null) return;
 
               final amount = double.tryParse(controller.text) ?? 0;
-              await ref.read(feeServiceProvider).markAsPaid(fee.id, amount, currentUser);
+              await ref.read(feeServiceProvider).markAsPaid(fee, amount, currentUser);
               if (context.mounted) Navigator.pop(context);
             },
             child: const Text('Confirm Payment'),
@@ -137,25 +187,14 @@ class _StatusChip extends StatelessWidget {
   Widget build(BuildContext context) {
     Color color;
     switch (status) {
-      case FeeStatus.paid:
-        color = Colors.green;
-        break;
-      case FeeStatus.pending:
-        color = Colors.orange;
-        break;
-      case FeeStatus.overdue:
-        color = Colors.red;
-        break;
-      case FeeStatus.partial:
-        color = Colors.blue;
-        break;
+      case FeeStatus.paid: color = Colors.green; break;
+      case FeeStatus.pending: color = Colors.orange; break;
+      case FeeStatus.overdue: color = Colors.red; break;
+      case FeeStatus.partial: color = Colors.blue; break;
     }
 
     return Chip(
-      label: Text(
-        status.name.toUpperCase(),
-        style: const TextStyle(color: Colors.white, fontSize: 10),
-      ),
+      label: Text(status.name.toUpperCase(), style: const TextStyle(color: Colors.white, fontSize: 10)),
       backgroundColor: color,
       padding: EdgeInsets.zero,
       visualDensity: VisualDensity.compact,
