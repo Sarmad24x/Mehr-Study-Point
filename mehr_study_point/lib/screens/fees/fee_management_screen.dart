@@ -97,7 +97,6 @@ class FeeManagementScreen extends ConsumerWidget {
   }
 
   void _showBulkGenerateDialog(BuildContext context, WidgetRef ref) {
-    final amountController = TextEditingController(text: '2000');
     final currentUser = ref.read(userProfileProvider).value;
     final students = ref.read(studentsStreamProvider).value ?? [];
 
@@ -105,16 +104,10 @@ class FeeManagementScreen extends ConsumerWidget {
       context: context,
       builder: (context) => AlertDialog(
         title: const Text('Generate Monthly Fees'),
-        content: Column(
+        content: const Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Text('This will create a monthly fee record for all ACTIVE students.'),
-            const SizedBox(height: 16),
-            TextField(
-              controller: amountController,
-              keyboardType: TextInputType.number,
-              decoration: const InputDecoration(labelText: 'Monthly Amount', border: OutlineInputBorder(), prefixText: 'Rs. '),
-            ),
+            Text('This will create monthly fee records for all ACTIVE students using their individual set rates.'),
           ],
         ),
         actions: [
@@ -122,9 +115,10 @@ class FeeManagementScreen extends ConsumerWidget {
           ElevatedButton(
             onPressed: () async {
               if (currentUser == null) return;
-              final amount = double.tryParse(amountController.text) ?? 2000.0;
               final count = await ref.read(feeServiceProvider).generateMonthlyFees(
-                students, amount, DateTime.now().add(const Duration(days: 5)), currentUser,
+                students, 
+                DateTime.now().add(const Duration(days: 5)), 
+                currentUser,
               );
               if (context.mounted) {
                 Navigator.pop(context);

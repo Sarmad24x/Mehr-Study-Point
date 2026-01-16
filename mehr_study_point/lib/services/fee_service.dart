@@ -49,7 +49,8 @@ class FeeService {
     ));
   }
 
-  Future<int> generateMonthlyFees(List<StudentModel> activeStudents, double standardAmount, DateTime dueDate, UserModel currentUser) async {
+  // UPDATED: Now uses each student's specific monthlyFee
+  Future<int> generateMonthlyFees(List<StudentModel> activeStudents, DateTime dueDate, UserModel currentUser) async {
     final batch = _firestore.batch();
     int count = 0;
 
@@ -59,7 +60,7 @@ class FeeService {
         final fee = FeeModel(
           id: feeId,
           studentId: student.id,
-          amount: standardAmount,
+          amount: student.monthlyFee, // Use student's own rate
           paidAmount: 0.0,
           dueDate: dueDate,
           status: FeeStatus.pending,
@@ -80,7 +81,7 @@ class FeeService {
       action: 'BULK_CREATE',
       entityType: 'Fee',
       entityId: 'multiple',
-      newValues: {'count': count, 'amount': standardAmount},
+      newValues: {'count': count},
       timestamp: DateTime.now(),
     ));
 
