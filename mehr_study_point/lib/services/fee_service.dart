@@ -34,7 +34,6 @@ class FeeService {
     box.putAll(map);
   }
 
-  // ADDED: Method to add a single fee
   Future<void> addFee(FeeModel fee, UserModel currentUser) async {
     await _firestore.collection('fees').doc(fee.id).set(fee.toMap());
 
@@ -50,7 +49,6 @@ class FeeService {
     ));
   }
 
-  // Generate Fees for all active students for a specific month
   Future<int> generateMonthlyFees(List<StudentModel> activeStudents, double standardAmount, DateTime dueDate, UserModel currentUser) async {
     final batch = _firestore.batch();
     int count = 0;
@@ -89,8 +87,13 @@ class FeeService {
     return count;
   }
 
-  // Improved markAsPaid with Partial Payment support
-  Future<void> markAsPaid(FeeModel fee, double newPaymentAmount, UserModel currentUser) async {
+  Future<void> markAsPaid({
+    required FeeModel fee, 
+    required double newPaymentAmount, 
+    required UserModel currentUser,
+    String? method,
+    String? notes,
+  }) async {
     final totalPaidSoFar = fee.paidAmount + newPaymentAmount;
     
     FeeStatus newStatus;
@@ -106,6 +109,8 @@ class FeeService {
       'paidAmount': totalPaidSoFar,
       'paidDate': DateTime.now().toIso8601String(),
       'status': newStatus.name,
+      'paymentMethod': method,
+      'notes': notes,
     };
     
     await _firestore.collection('fees').doc(fee.id).update(updateData);

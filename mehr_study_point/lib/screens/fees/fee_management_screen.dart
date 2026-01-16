@@ -73,6 +73,8 @@ class FeeManagementScreen extends ConsumerWidget {
                       Text('Type: ${fee.type} | Total: Rs. ${fee.amount}'),
                       if (remaining > 0)
                         Text('Owed: Rs. $remaining', style: const TextStyle(color: Colors.red, fontWeight: FontWeight.bold)),
+                      if (fee.paymentMethod != null)
+                        Text('Via: ${fee.paymentMethod}', style: const TextStyle(fontSize: 12, color: Colors.blueGrey)),
                       Text(
                         'Due: ${DateFormat('dd MMM yyyy').format(fee.dueDate)}',
                         style: TextStyle(
@@ -139,42 +141,72 @@ class FeeManagementScreen extends ConsumerWidget {
   void _showPaymentDialog(BuildContext context, WidgetRef ref, FeeModel fee) {
     final remaining = fee.amount - fee.paidAmount;
     final controller = TextEditingController(text: remaining.toString());
-    
+    final notesController = TextEditingController();
+    String? selectedMethod = 'Cash';
+
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Record Payment'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Text('Student owes Rs. $remaining'),
-            const SizedBox(height: 16),
-            TextField(
-              controller: controller,
-              keyboardType: TextInputType.number,
-              decoration: const InputDecoration(
-                labelText: 'Amount Paid Now',
-                border: OutlineInputBorder(),
-                prefixText: 'Rs. ',
+      builder: (context) {
+        return StatefulBuilder(
+          builder: (context, setState) {
+            return AlertDialog(
+              title: const Text('Record Payment'),
+              content: SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text('Student owes Rs. $remaining', style: const TextStyle(fontWeight: FontWeight.bold)),
+                    const SizedBox(height: 16),
+                    TextField(
+                      controller: controller,
+                      keyboardType: TextInputType.number,
+                      decoration: const InputDecoration(
+                        labelText: 'Amount Paid Now',
+                        border: OutlineInputBorder(),
+                        prefixText: 'Rs. ',
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    DropdownButtonFormField<String>(
+                      value: selectedMethod,
+                      decoration: const InputDecoration(labelText: 'Payment Method', border: OutlineInputBorder()),
+                      items: ['Cash', 'EasyPaisa', 'JazzCash', 'Bank Transfer']
+                          .map((m) => DropdownMenuItem(value: m, child: Text(m)))
+                          .toList(),
+                      onChanged: (val) => setState(() => selectedMethod = val),
+                    ),
+                    const SizedBox(height: 16),
+                    TextField(
+                      controller: notesController,
+                      decoration: const InputDecoration(labelText: 'Notes', border: OutlineInputBorder()),
+                    ),
+                  ],
+                ),
               ),
-            ),
-          ],
-        ),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancel')),
-          ElevatedButton(
-            onPressed: () async {
-              final currentUser = ref.read(userProfileProvider).value;
-              if (currentUser == null) return;
+              actions: [
+                TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancel')),
+                ElevatedButton(
+                  onPressed: () async {
+                    final currentUser = ref.read(userProfileProvider).value;
+                    if (currentUser == null) return;
 
-              final amount = double.tryParse(controller.text) ?? 0;
-              await ref.read(feeServiceProvider).markAsPaid(fee, amount, currentUser);
-              if (context.mounted) Navigator.pop(context);
-            },
-            child: const Text('Confirm Payment'),
-          ),
-        ],
-      ),
+                    final amount = double.tryParse(controller.text) ?? 0;
+                    await ref.read(feeServiceProvider).markAsPaid(
+                      fee: fee,
+                      newPaymentAmount: amount,
+                      currentUser: currentUser,
+                      method: selectedMethod,
+                      notes: notesController.text.trim(),
+                    );
+                    if (context.mounted) Navigator.pop(context);
+                  },
+                  child: const Text('Confirm Payment'),
+                ),
+              ],
+            );
+          },
+        );
+      },
     );
   }
 }

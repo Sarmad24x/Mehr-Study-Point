@@ -32,6 +32,10 @@ class FeeModel {
   final FeeStatus status;
   @HiveField(7)
   final String type; // Admission, Monthly, Late, Waiver
+  @HiveField(8)
+  final String? paymentMethod; // Cash, Online, etc.
+  @HiveField(9)
+  final String? notes;
 
   FeeModel({
     required this.id,
@@ -42,6 +46,8 @@ class FeeModel {
     this.paidDate,
     required this.status,
     required this.type,
+    this.paymentMethod,
+    this.notes,
   });
 
   Map<String, dynamic> toMap() {
@@ -54,6 +60,8 @@ class FeeModel {
       'paidDate': paidDate?.toIso8601String(),
       'status': status.name,
       'type': type,
+      'paymentMethod': paymentMethod,
+      'notes': notes,
     };
   }
 
@@ -67,6 +75,8 @@ class FeeModel {
       paidDate: map['paidDate'] != null ? DateTime.parse(map['paidDate']) : null,
       status: FeeStatus.values.byName(map['status'] ?? 'pending'),
       type: map['type'] ?? 'Monthly',
+      paymentMethod: map['paymentMethod'],
+      notes: map['notes'],
     );
   }
 }
