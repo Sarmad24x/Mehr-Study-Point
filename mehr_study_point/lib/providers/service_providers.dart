@@ -5,6 +5,7 @@ import '../services/seat_service.dart';
 import '../services/student_service.dart';
 import '../services/fee_service.dart';
 import '../services/export_service.dart';
+import '../services/audit_service.dart';
 
 // Provider for AuthService
 final authServiceProvider = Provider<AuthService>((ref) {
@@ -16,6 +17,11 @@ final hiveServiceProvider = Provider<HiveService>((ref) {
   return HiveService();
 });
 
+// Provider for AuditService
+final auditServiceProvider = Provider<AuditService>((ref) {
+  return AuditService();
+});
+
 // Provider for SeatService
 final seatServiceProvider = Provider<SeatService>((ref) {
   return SeatService(ref.watch(hiveServiceProvider));
@@ -23,7 +29,10 @@ final seatServiceProvider = Provider<SeatService>((ref) {
 
 // Provider for StudentService
 final studentServiceProvider = Provider<StudentService>((ref) {
-  return StudentService(ref.watch(hiveServiceProvider));
+  return StudentService(
+    ref.watch(hiveServiceProvider),
+    ref.watch(auditServiceProvider),
+  );
 });
 
 // Provider for FeeService
