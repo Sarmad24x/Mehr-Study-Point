@@ -5,6 +5,7 @@ import '../../models/student_model.dart';
 import '../../models/seat_model.dart';
 import '../../providers/service_providers.dart';
 import '../../providers/seat_provider.dart';
+import '../../providers/auth_provider.dart';
 
 class AddStudentScreen extends ConsumerStatefulWidget {
   const AddStudentScreen({super.key});
@@ -43,6 +44,9 @@ class _AddStudentScreenState extends ConsumerState<AddStudentScreen> {
       return;
     }
 
+    final currentUser = ref.read(userProfileProvider).value;
+    if (currentUser == null) return;
+
     setState(() => _isLoading = true);
 
     try {
@@ -59,7 +63,7 @@ class _AddStudentScreenState extends ConsumerState<AddStudentScreen> {
         assignedSeatNumber: _selectedSeat?.seatNumber,
       );
 
-      await ref.read(studentServiceProvider).addStudent(student);
+      await ref.read(studentServiceProvider).addStudent(student, currentUser);
       
       if (mounted) {
         Navigator.pop(context);

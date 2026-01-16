@@ -37,7 +37,10 @@ final studentServiceProvider = Provider<StudentService>((ref) {
 
 // Provider for FeeService
 final feeServiceProvider = Provider<FeeService>((ref) {
-  return FeeService(ref.watch(hiveServiceProvider));
+  return FeeService(
+    ref.watch(hiveServiceProvider),
+    ref.watch(auditServiceProvider),
+  );
 });
 
 // Provider for ExportService

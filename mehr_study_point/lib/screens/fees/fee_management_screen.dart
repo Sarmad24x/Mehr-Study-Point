@@ -5,6 +5,7 @@ import '../../providers/fee_provider.dart';
 import '../../providers/student_provider.dart';
 import '../../models/fee_model.dart';
 import '../../providers/service_providers.dart';
+import '../../providers/auth_provider.dart';
 
 class FeeManagementScreen extends ConsumerWidget {
   const FeeManagementScreen({super.key});
@@ -113,8 +114,11 @@ class FeeManagementScreen extends ConsumerWidget {
           ),
           ElevatedButton(
             onPressed: () async {
+              final currentUser = ref.read(userProfileProvider).value;
+              if (currentUser == null) return;
+
               final amount = double.tryParse(controller.text) ?? 0;
-              await ref.read(feeServiceProvider).markAsPaid(fee.id, amount);
+              await ref.read(feeServiceProvider).markAsPaid(fee.id, amount, currentUser);
               if (context.mounted) Navigator.pop(context);
             },
             child: const Text('Confirm Payment'),
