@@ -2,11 +2,13 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 import '../../models/student_model.dart';
-import '../../models/seat_model.dart';
+import '../../models/fee_model.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/service_providers.dart';
 import '../../providers/seat_provider.dart';
+import '../../providers/fee_provider.dart';
 import 'add_student_screen.dart';
+import '../../models/seat_model.dart';
 
 class StudentDetailsScreen extends ConsumerWidget {
   final StudentModel student;
@@ -15,6 +17,7 @@ class StudentDetailsScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final currentUser = ref.watch(userProfileProvider).value;
+    final feesAsync = ref.watch(feesStreamProvider);
 
     return Scaffold(
       appBar: AppBar(
@@ -57,6 +60,8 @@ class StudentDetailsScreen extends ConsumerWidget {
             const SizedBox(height: 24),
             _buildSeatCard(context, ref, currentUser),
             const SizedBox(height: 24),
+            _buildFeeHistoryCard(context, feesAsync),
+            const SizedBox(height: 24),
             _buildGuardianCard(context),
           ],
         ),
@@ -77,6 +82,7 @@ class StudentDetailsScreen extends ConsumerWidget {
             _buildDetailRow('Contact', student.contactNumber),
             _buildDetailRow('Address', student.address),
             _buildDetailRow('Admission', DateFormat('dd MMM yyyy').format(student.admissionDate)),
+            _buildDetailRow('Monthly Rate', 'Rs. ${student.monthlyFee}'),
             _buildDetailRow('Status', student.status),
           ],
         ),
@@ -93,6 +99,49 @@ class StudentDetailsScreen extends ConsumerWidget {
         trailing: TextButton(
           onPressed: () => _showSwapDialog(context, ref, currentUser),
           child: const Text('SWAP'),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildFeeHistoryCard(BuildContext context, AsyncValue<List<FeeModel>> feesAsync) {
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text('Payment History', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+            const Divider(),
+            feesAsync.when(
+              data: (allFees) {
+                final studentFees = allFees.where((f) => f.studentId == student.id).toList();
+                if (studentFees.isEmpty) {
+                  return const Padding(
+                    padding: EdgeInsets.symmetric(vertical: 8.0),
+                    child: Text('No payment records found.'),
+                  );
+                }
+                return Column(
+                  children: studentFees.map((fee) => ListTile(
+                    contentPadding: EdgeInsets.zero,
+                    title: Text('${fee.type} - Rs. ${fee.amount}'),
+                    subtitle: Text(DateFormat('MMM yyyy').format(fee.dueDate)),
+                    trailing: Text(
+                      fee.status.name.toUpperCase(),
+                      style: TextStyle(
+                        color: fee.status == FeeStatus.paid ? Colors.green : Colors.orange,
+                        fontWeight: FontWeight.bold,
+                        fontSize: 12,
+                      ),
+                    ),
+                  )).toList(),
+                );
+              },
+              loading: () => const CircularProgressIndicator(),
+              error: (e, _) => Text('Error loading history: $e'),
+            ),
+          ],
         ),
       ),
     );
@@ -140,8 +189,8 @@ class StudentDetailsScreen extends ConsumerWidget {
                                   currentUser: currentUser,
                                 );
                             if (context.mounted) {
-                              Navigator.pop(context); // Close dialog
-                              Navigator.pop(context); // Go back to student list to refresh state
+                              Navigator.pop(context);
+                              Navigator.pop(context);
                               ScaffoldMessenger.of(context).showSnackBar(
                                 const SnackBar(content: Text('Seat swapped successfully')),
                               );
@@ -211,7 +260,7 @@ class StudentDetailsScreen extends ConsumerWidget {
             seatId: student.assignedSeatId,
           );
       if (context.mounted) {
-        Navigator.pop(context); // Close details screen
+        Navigator.pop(context);
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Student deleted')),
         );

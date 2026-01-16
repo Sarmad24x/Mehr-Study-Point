@@ -6,6 +6,7 @@ import '../../providers/service_providers.dart';
 import '../../providers/student_provider.dart';
 import '../../providers/fee_provider.dart';
 import '../../models/user_model.dart';
+import 'audit_logs_screen.dart';
 
 class SettingsScreen extends ConsumerWidget {
   const SettingsScreen({super.key});
@@ -58,19 +59,22 @@ class SettingsScreen extends ConsumerWidget {
                 child: Column(
                   children: [
                     ListTile(
+                      leading: const Icon(Icons.history),
+                      title: const Text('View Audit Logs'),
+                      subtitle: const Text('Track all system changes'),
+                      onTap: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(builder: (context) => const AuditLogsScreen()),
+                        );
+                      },
+                    ),
+                    const Divider(height: 1),
+                    ListTile(
                       leading: const Icon(Icons.grid_view),
                       title: const Text('Initialize 160 Seats'),
-                      subtitle: const Text('Run this once to set up the library grid'),
                       onTap: () async {
-                        final confirm = await _showConfirmDialog(context, 'Initialize Seats?');
-                        if (confirm == true) {
-                          await ref.read(seatServiceProvider).generateInitialSeats();
-                          if (context.mounted) {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(content: Text('Seats initialized!')),
-                            );
-                          }
-                        }
+                        await ref.read(seatServiceProvider).generateInitialSeats();
                       },
                     ),
                     const Divider(height: 1),
@@ -90,17 +94,13 @@ class SettingsScreen extends ConsumerWidget {
               ),
               const SizedBox(height: 32),
               const Text(
-                'User Management (Employees)',
+                'User Management',
                 style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
               ),
               const SizedBox(height: 8),
               usersAsync.when(
                 data: (users) {
-                  final employees =
-                      users.where((u) => u.role == UserRole.employee).toList();
-                  if (employees.isEmpty) {
-                    return const Center(child: Text('No employees found.'));
-                  }
+                  final employees = users.where((u) => u.role == UserRole.employee).toList();
                   return ListView.builder(
                     shrinkWrap: true,
                     physics: const NeverScrollableScrollPhysics(),
@@ -111,7 +111,6 @@ class SettingsScreen extends ConsumerWidget {
                         child: ListTile(
                           title: Text(employee.name),
                           subtitle: Text(employee.email),
-                          trailing: const Icon(Icons.edit_outlined),
                         ),
                       );
                     },
@@ -122,29 +121,13 @@ class SettingsScreen extends ConsumerWidget {
               ),
               const SizedBox(height: 16),
               ElevatedButton.icon(
-                onPressed: () {
-                  _showAddUserDialog(context, ref);
-                },
+                onPressed: () => _showAddUserDialog(context, ref),
                 icon: const Icon(Icons.add),
                 label: const Text('Add New Employee'),
               ),
             ],
           ],
         ),
-      ),
-    );
-  }
-
-  Future<bool?> _showConfirmDialog(BuildContext context, String title) {
-    return showDialog<bool>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: Text(title),
-        content: const Text('This will add 160 seats to your database if they don\'t exist.'),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Cancel')),
-          TextButton(onPressed: () => Navigator.pop(context, true), child: const Text('Confirm')),
-        ],
       ),
     );
   }
@@ -159,23 +142,12 @@ class SettingsScreen extends ConsumerWidget {
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Text('Note: Employees must be registered in Firebase first.'),
-            const SizedBox(height: 16),
-            TextField(
-              controller: nameController,
-              decoration: const InputDecoration(labelText: 'Name'),
-            ),
-            TextField(
-              controller: emailController,
-              decoration: const InputDecoration(labelText: 'Email'),
-            ),
+            TextField(controller: nameController, decoration: const InputDecoration(labelText: 'Name')),
+            TextField(controller: emailController, decoration: const InputDecoration(labelText: 'Email')),
           ],
         ),
         actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Cancel'),
-          ),
+          TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancel')),
           ElevatedButton(
             onPressed: () async {
               final user = UserModel(
