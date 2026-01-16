@@ -8,7 +8,6 @@ import '../../providers/service_providers.dart';
 import '../../providers/seat_provider.dart';
 import '../../providers/auth_provider.dart';
 
-
 class AddStudentScreen extends ConsumerStatefulWidget {
   final StudentModel? student;
   const AddStudentScreen({super.key, this.student});
@@ -25,6 +24,7 @@ class _AddStudentScreenState extends ConsumerState<AddStudentScreen> {
   late final TextEditingController _guardianContactController;
   late final TextEditingController _addressController;
   late final TextEditingController _admissionFeeController;
+  late final TextEditingController _monthlyFeeController;
   
   SeatModel? _selectedSeat;
   bool _isLoading = false;
@@ -37,7 +37,8 @@ class _AddStudentScreenState extends ConsumerState<AddStudentScreen> {
     _guardianNameController = TextEditingController(text: widget.student?.guardianName);
     _guardianContactController = TextEditingController(text: widget.student?.guardianContact);
     _addressController = TextEditingController(text: widget.student?.address);
-    _admissionFeeController = TextEditingController(text: '1000'); // Default Admission Fee
+    _admissionFeeController = TextEditingController(text: '1000');
+    _monthlyFeeController = TextEditingController(text: widget.student?.monthlyFee.toString() ?? '2000');
   }
 
   @override
@@ -48,6 +49,7 @@ class _AddStudentScreenState extends ConsumerState<AddStudentScreen> {
     _guardianContactController.dispose();
     _addressController.dispose();
     _admissionFeeController.dispose();
+    _monthlyFeeController.dispose();
     super.dispose();
   }
 
@@ -70,6 +72,8 @@ class _AddStudentScreenState extends ConsumerState<AddStudentScreen> {
 
     try {
       final studentId = isEditing ? widget.student!.id : const Uuid().v4();
+      final monthlyFeeAmount = double.tryParse(_monthlyFeeController.text) ?? 2000.0;
+
       final updatedStudent = StudentModel(
         id: studentId,
         fullName: _nameController.text.trim(),
@@ -81,6 +85,7 @@ class _AddStudentScreenState extends ConsumerState<AddStudentScreen> {
         status: isEditing ? widget.student!.status : 'Active',
         assignedSeatId: isEditing ? widget.student!.assignedSeatId : _selectedSeat?.id,
         assignedSeatNumber: isEditing ? widget.student!.assignedSeatNumber : _selectedSeat?.seatNumber,
+        monthlyFee: monthlyFeeAmount,
       );
 
       if (isEditing) {
@@ -92,9 +97,9 @@ class _AddStudentScreenState extends ConsumerState<AddStudentScreen> {
       } else {
         await ref.read(studentServiceProvider).addStudent(updatedStudent, currentUser);
         
-        // Mature Fee: Auto-generate Admission Fee record
+        // 1. Create Admission Fee
         final admissionFeeAmount = double.tryParse(_admissionFeeController.text) ?? 1000.0;
-        final fee = FeeModel(
+        await ref.read(feeServiceProvider).addFee(FeeModel(
           id: const Uuid().v4(),
           studentId: studentId,
           amount: admissionFeeAmount,
@@ -102,8 +107,18 @@ class _AddStudentScreenState extends ConsumerState<AddStudentScreen> {
           dueDate: DateTime.now(),
           status: FeeStatus.pending,
           type: 'Admission',
-        );
-        await ref.read(feeServiceProvider).addFee(fee, currentUser);
+        ), currentUser);
+
+        // 2. Create First Month's Fee
+        await ref.read(feeServiceProvider).addFee(FeeModel(
+          id: const Uuid().v4(),
+          studentId: studentId,
+          amount: monthlyFeeAmount,
+          paidAmount: 0.0,
+          dueDate: DateTime.now(),
+          status: FeeStatus.pending,
+          type: 'Monthly',
+        ), currentUser);
       }
       
       if (mounted) {
@@ -150,6 +165,13 @@ class _AddStudentScreenState extends ConsumerState<AddStudentScreen> {
                     controller: _contactController,
                     decoration: const InputDecoration(labelText: 'Contact Number*', border: OutlineInputBorder()),
                     keyboardType: TextInputType.phone,
+                    validator: (value) => value?.isEmpty ?? true ? 'Required' : null,
+                  ),
+                  const SizedBox(height: 16),
+                  TextFormField(
+                    controller: _monthlyFeeController,
+                    decoration: const InputDecoration(labelText: 'Monthly Fee Rate*', border: OutlineInputBorder(), prefixText: 'Rs. '),
+                    keyboardType: TextInputType.number,
                     validator: (value) => value?.isEmpty ?? true ? 'Required' : null,
                   ),
                   const SizedBox(height: 16),

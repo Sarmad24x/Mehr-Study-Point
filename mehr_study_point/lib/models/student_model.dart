@@ -24,6 +24,8 @@ class StudentModel {
   final String? assignedSeatId;
   @HiveField(9)
   final String? assignedSeatNumber;
+  @HiveField(10)
+  final double monthlyFee;
 
   StudentModel({
     required this.id,
@@ -36,6 +38,7 @@ class StudentModel {
     required this.status,
     this.assignedSeatId,
     this.assignedSeatNumber,
+    this.monthlyFee = 2000.0,
   });
 
   Map<String, dynamic> toMap() {
@@ -50,6 +53,7 @@ class StudentModel {
       'status': status,
       'assignedSeatId': assignedSeatId,
       'assignedSeatNumber': assignedSeatNumber,
+      'monthlyFee': monthlyFee,
     };
   }
 
@@ -65,6 +69,7 @@ class StudentModel {
       status: map['status'] ?? 'Active',
       assignedSeatId: map['assignedSeatId'],
       assignedSeatNumber: map['assignedSeatNumber'],
+      monthlyFee: (map['monthlyFee'] as num?)?.toDouble() ?? 2000.0,
     );
   }
 }
