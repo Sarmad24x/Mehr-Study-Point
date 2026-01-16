@@ -24,7 +24,10 @@ final auditServiceProvider = Provider<AuditService>((ref) {
 
 // Provider for SeatService
 final seatServiceProvider = Provider<SeatService>((ref) {
-  return SeatService(ref.watch(hiveServiceProvider));
+  return SeatService(
+    ref.watch(hiveServiceProvider),
+    ref.watch(auditServiceProvider),
+  );
 });
 
 // Provider for StudentService

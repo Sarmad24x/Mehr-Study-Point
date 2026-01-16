@@ -8,7 +8,8 @@ import '../../providers/seat_provider.dart';
 import '../../providers/auth_provider.dart';
 
 class AddStudentScreen extends ConsumerStatefulWidget {
-  const AddStudentScreen({super.key});
+  final StudentModel? student;
+  const AddStudentScreen({super.key, this.student});
 
   @override
   ConsumerState<AddStudentScreen> createState() => _AddStudentScreenState();
@@ -16,14 +17,27 @@ class AddStudentScreen extends ConsumerStatefulWidget {
 
 class _AddStudentScreenState extends ConsumerState<AddStudentScreen> {
   final _formKey = GlobalKey<FormState>();
-  final _nameController = TextEditingController();
-  final _contactController = TextEditingController();
-  final _guardianNameController = TextEditingController();
-  final _guardianContactController = TextEditingController();
-  final _addressController = TextEditingController();
+  late final TextEditingController _nameController;
+  late final TextEditingController _contactController;
+  late final TextEditingController _guardianNameController;
+  late final TextEditingController _guardianContactController;
+  late final TextEditingController _addressController;
   
   SeatModel? _selectedSeat;
   bool _isLoading = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _nameController = TextEditingController(text: widget.student?.fullName);
+    _contactController = TextEditingController(text: widget.student?.contactNumber);
+    _guardianNameController = TextEditingController(text: widget.student?.guardianName);
+    _guardianContactController = TextEditingController(text: widget.student?.guardianContact);
+    _addressController = TextEditingController(text: widget.student?.address);
+    
+    // If editing, we might need to handle the seat selection differently 
+    // since the current seat is 'reserved' and might not show in 'available' list.
+  }
 
   @override
   void dispose() {
@@ -37,7 +51,10 @@ class _AddStudentScreenState extends ConsumerState<AddStudentScreen> {
 
   Future<void> _saveStudent() async {
     if (!_formKey.currentState!.validate()) return;
-    if (_selectedSeat == null) {
+    
+    final isEditing = widget.student != null;
+
+    if (!isEditing && _selectedSeat == null) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Please select a seat')),
       );
@@ -50,25 +67,33 @@ class _AddStudentScreenState extends ConsumerState<AddStudentScreen> {
     setState(() => _isLoading = true);
 
     try {
-      final student = StudentModel(
-        id: const Uuid().v4(),
+      final updatedStudent = StudentModel(
+        id: isEditing ? widget.student!.id : const Uuid().v4(),
         fullName: _nameController.text.trim(),
         contactNumber: _contactController.text.trim(),
         guardianName: _guardianNameController.text.trim().isEmpty ? null : _guardianNameController.text.trim(),
         guardianContact: _guardianContactController.text.trim().isEmpty ? null : _guardianContactController.text.trim(),
         address: _addressController.text.trim(),
-        admissionDate: DateTime.now(),
-        status: 'Active',
-        assignedSeatId: _selectedSeat?.id,
-        assignedSeatNumber: _selectedSeat?.seatNumber,
+        admissionDate: isEditing ? widget.student!.admissionDate : DateTime.now(),
+        status: isEditing ? widget.student!.status : 'Active',
+        assignedSeatId: isEditing ? widget.student!.assignedSeatId : _selectedSeat?.id,
+        assignedSeatNumber: isEditing ? widget.student!.assignedSeatNumber : _selectedSeat?.seatNumber,
       );
 
-      await ref.read(studentServiceProvider).addStudent(student, currentUser);
+      if (isEditing) {
+        await ref.read(studentServiceProvider).updateStudent(
+          updatedStudent, 
+          currentUser,
+          oldValues: widget.student!.toMap(),
+        );
+      } else {
+        await ref.read(studentServiceProvider).addStudent(updatedStudent, currentUser);
+      }
       
       if (mounted) {
         Navigator.pop(context);
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Student enrolled successfully')),
+          SnackBar(content: Text(isEditing ? 'Student updated successfully' : 'Student enrolled successfully')),
         );
       }
     } catch (e) {
@@ -84,11 +109,12 @@ class _AddStudentScreenState extends ConsumerState<AddStudentScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final isEditing = widget.student != null;
     final seatsAsync = ref.watch(seatsStreamProvider);
     final availableSeats = seatsAsync.value?.where((s) => s.status == SeatStatus.available).toList() ?? [];
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Enroll New Student')),
+      appBar: AppBar(title: Text(isEditing ? 'Edit Student' : 'Enroll New Student')),
       body: _isLoading 
         ? const Center(child: CircularProgressIndicator())
         : SingleChildScrollView(
@@ -128,22 +154,34 @@ class _AddStudentScreenState extends ConsumerState<AddStudentScreen> {
                     maxLines: 2,
                     validator: (value) => value?.isEmpty ?? true ? 'Required' : null,
                   ),
-                  const SizedBox(height: 24),
-                  const Text('Assign Seat*', style: TextStyle(fontWeight: FontWeight.bold)),
-                  const SizedBox(height: 8),
-                  DropdownButtonFormField<SeatModel>(
-                    decoration: const InputDecoration(border: OutlineInputBorder()),
-                    hint: const Text('Select an available seat'),
-                    value: _selectedSeat,
-                    items: availableSeats.map((seat) {
-                      return DropdownMenuItem(
-                        value: seat,
-                        child: Text('Seat ${seat.seatNumber}'),
-                      );
-                    }).toList(),
-                    onChanged: (value) => setState(() => _selectedSeat = value),
-                    validator: (value) => value == null ? 'Required' : null,
-                  ),
+                  if (!isEditing) ...[
+                    const SizedBox(height: 24),
+                    const Text('Assign Seat*', style: TextStyle(fontWeight: FontWeight.bold)),
+                    const SizedBox(height: 8),
+                    DropdownButtonFormField<SeatModel>(
+                      decoration: const InputDecoration(border: OutlineInputBorder()),
+                      hint: const Text('Select an available seat'),
+                      value: _selectedSeat,
+                      items: availableSeats.map((seat) {
+                        return DropdownMenuItem(
+                          value: seat,
+                          child: Text('Seat ${seat.seatNumber}'),
+                        );
+                      }).toList(),
+                      onChanged: (value) => setState(() => _selectedSeat = value),
+                      validator: (value) => value == null ? 'Required' : null,
+                    ),
+                  ] else ...[
+                    const SizedBox(height: 24),
+                    Card(
+                      color: Colors.blue.shade50,
+                      child: ListTile(
+                        leading: const Icon(Icons.event_seat, color: Colors.blue),
+                        title: const Text('Current Seat'),
+                        subtitle: Text('Seat Number: ${widget.student?.assignedSeatNumber ?? 'None'}'),
+                      ),
+                    ),
+                  ],
                   const SizedBox(height: 32),
                   ElevatedButton(
                     onPressed: _saveStudent,
@@ -152,7 +190,7 @@ class _AddStudentScreenState extends ConsumerState<AddStudentScreen> {
                       backgroundColor: Colors.blue.shade800,
                       foregroundColor: Colors.white,
                     ),
-                    child: const Text('Enroll Student'),
+                    child: Text(isEditing ? 'Update Details' : 'Enroll Student'),
                   ),
                 ],
               ),

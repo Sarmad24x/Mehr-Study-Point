@@ -4,6 +4,7 @@ import 'package:intl/intl.dart';
 import '../../models/student_model.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/service_providers.dart';
+import 'add_student_screen.dart';
 
 class StudentDetailsScreen extends ConsumerWidget {
   final StudentModel student;
@@ -20,7 +21,12 @@ class StudentDetailsScreen extends ConsumerWidget {
           IconButton(
             icon: const Icon(Icons.edit),
             onPressed: () {
-              // Navigate to Edit Screen (which we will reuse or create)
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => AddStudentScreen(student: student),
+                ),
+              );
             },
           ),
           IconButton(
