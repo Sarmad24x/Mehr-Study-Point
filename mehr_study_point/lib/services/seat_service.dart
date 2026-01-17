@@ -13,7 +13,6 @@ class SeatService {
 
   SeatService(this._hiveService, [this._auditService]);
 
-  // Stream of seats from Firestore
   Stream<List<SeatModel>> getSeatsStream() {
     return _firestore.collection('seats').orderBy('seatNumber').snapshots().map(
       (snapshot) {
@@ -22,7 +21,6 @@ class SeatService {
           data['id'] = doc.id;
           return SeatModel.fromMap(data);
         }).toList();
-        
         _cacheSeats(seats);
         return seats;
       },
@@ -35,14 +33,41 @@ class SeatService {
     box.putAll(map);
   }
 
-  Future<void> updateSeatStatus(String seatId, SeatStatus status, {String? studentId}) async {
+  Future<void> updateSeatStatus(String seatId, SeatStatus status, {String? studentId, DateTime? holdExpiresAt}) async {
     await _firestore.collection('seats').doc(seatId).update({
       'status': status.name,
       'studentId': studentId,
+      'holdExpiresAt': holdExpiresAt?.toIso8601String(),
     });
   }
 
-  // SWAP SEAT LOGIC
+  // BULK UPDATE Logic
+  Future<void> bulkUpdateSeats(List<String> seatIds, SeatStatus newStatus, UserModel currentUser) async {
+    final batch = _firestore.batch();
+    for (var id in seatIds) {
+      batch.update(_firestore.collection('seats').doc(id), {
+        'status': newStatus.name,
+        // If moving to available or maintenance, clear student data
+        if (newStatus == SeatStatus.available || newStatus == SeatStatus.maintenance) 'studentId': null,
+        if (newStatus == SeatStatus.available || newStatus == SeatStatus.maintenance) 'holdExpiresAt': null,
+      });
+    }
+    await batch.commit();
+
+    if (_auditService != null) {
+      await _auditService!.logAction(AuditLogModel(
+        id: '',
+        userId: currentUser.id,
+        userName: currentUser.name,
+        action: 'BULK_UPDATE',
+        entityType: 'Seat',
+        entityId: 'multiple',
+        newValues: {'count': seatIds.length, 'status': newStatus.name},
+        timestamp: DateTime.now(),
+      ));
+    }
+  }
+
   Future<void> swapSeat({
     required StudentModel student,
     required SeatModel oldSeat,
@@ -50,28 +75,20 @@ class SeatService {
     required UserModel currentUser,
   }) async {
     final batch = _firestore.batch();
-
-    // 1. Mark old seat as Available
     batch.update(_firestore.collection('seats').doc(oldSeat.id), {
       'status': SeatStatus.available.name,
       'studentId': null,
     });
-
-    // 2. Mark new seat as Reserved for this student
     batch.update(_firestore.collection('seats').doc(newSeat.id), {
       'status': SeatStatus.reserved.name,
       'studentId': student.id,
     });
-
-    // 3. Update student record with new seat info
     batch.update(_firestore.collection('students').doc(student.id), {
       'assignedSeatId': newSeat.id,
       'assignedSeatNumber': newSeat.seatNumber,
     });
-
     await batch.commit();
 
-    // 4. Log the audit trail
     if (_auditService != null) {
       await _auditService!.logAction(AuditLogModel(
         id: '',
@@ -89,16 +106,11 @@ class SeatService {
 
   Future<void> generateInitialSeats() async {
     final query = await _firestore.collection('seats').limit(1).get();
-    if (query.docs.isNotEmpty) return; // Don't regenerate if they exist
-
+    if (query.docs.isNotEmpty) return;
     final batch = _firestore.batch();
     for (int i = 1; i <= 160; i++) {
       final docRef = _firestore.collection('seats').doc();
-      final seat = SeatModel(
-        id: docRef.id,
-        seatNumber: i.toString(),
-        status: SeatStatus.available,
-      );
+      final seat = SeatModel(id: docRef.id, seatNumber: i.toString(), status: SeatStatus.available);
       batch.set(docRef, seat.toMap());
     }
     await batch.commit();

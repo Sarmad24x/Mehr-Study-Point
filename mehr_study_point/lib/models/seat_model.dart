@@ -10,6 +10,8 @@ enum SeatStatus {
   reserved,
   @HiveField(2)
   maintenance,
+  @HiveField(3)
+  held,
 }
 
 @HiveType(typeId: 4)
@@ -24,6 +26,8 @@ class SeatModel {
   final String? studentId;
   @HiveField(4)
   final String? zone;
+  @HiveField(5)
+  final DateTime? holdExpiresAt;
 
   SeatModel({
     required this.id,
@@ -31,6 +35,7 @@ class SeatModel {
     required this.status,
     this.studentId,
     this.zone,
+    this.holdExpiresAt,
   });
 
   Map<String, dynamic> toMap() {
@@ -40,6 +45,7 @@ class SeatModel {
       'status': status.name,
       'studentId': studentId,
       'zone': zone,
+      'holdExpiresAt': holdExpiresAt?.toIso8601String(),
     };
   }
 
@@ -50,6 +56,25 @@ class SeatModel {
       status: SeatStatus.values.byName(map['status'] ?? 'available'),
       studentId: map['studentId'],
       zone: map['zone'],
+      holdExpiresAt: map['holdExpiresAt'] != null 
+          ? DateTime.parse(map['holdExpiresAt']) 
+          : null,
+    );
+  }
+
+  SeatModel copyWith({
+    SeatStatus? status,
+    String? studentId,
+    String? zone,
+    DateTime? holdExpiresAt,
+  }) {
+    return SeatModel(
+      id: id,
+      seatNumber: seatNumber,
+      status: status ?? this.status,
+      studentId: studentId ?? this.studentId,
+      zone: zone ?? this.zone,
+      holdExpiresAt: holdExpiresAt ?? this.holdExpiresAt,
     );
   }
 }

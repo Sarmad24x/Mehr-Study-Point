@@ -22,13 +22,14 @@ class SeatModelAdapter extends TypeAdapter<SeatModel> {
       status: fields[2] as SeatStatus,
       studentId: fields[3] as String?,
       zone: fields[4] as String?,
+      holdExpiresAt: fields[5] as DateTime?,
     );
   }
 
   @override
   void write(BinaryWriter writer, SeatModel obj) {
     writer
-      ..writeByte(5)
+      ..writeByte(6)
       ..writeByte(0)
       ..write(obj.id)
       ..writeByte(1)
@@ -38,7 +39,9 @@ class SeatModelAdapter extends TypeAdapter<SeatModel> {
       ..writeByte(3)
       ..write(obj.studentId)
       ..writeByte(4)
-      ..write(obj.zone);
+      ..write(obj.zone)
+      ..writeByte(5)
+      ..write(obj.holdExpiresAt);
   }
 
   @override
@@ -65,6 +68,8 @@ class SeatStatusAdapter extends TypeAdapter<SeatStatus> {
         return SeatStatus.reserved;
       case 2:
         return SeatStatus.maintenance;
+      case 3:
+        return SeatStatus.held;
       default:
         return SeatStatus.available;
     }
@@ -81,6 +86,9 @@ class SeatStatusAdapter extends TypeAdapter<SeatStatus> {
         break;
       case SeatStatus.maintenance:
         writer.writeByte(2);
+        break;
+      case SeatStatus.held:
+        writer.writeByte(3);
         break;
     }
   }
