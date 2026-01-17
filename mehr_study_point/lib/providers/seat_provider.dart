@@ -20,7 +20,14 @@ final filteredSeatsProvider = Provider<List<SeatModel>>((ref) {
 
   return seatsAsync.when(
     data: (seats) {
-      return seats.where((seat) {
+      // Sort seats numerically by seat number
+      final sortedSeats = List<SeatModel>.from(seats)..sort((a, b) {
+        final aNum = int.tryParse(a.seatNumber) ?? 0;
+        final bNum = int.tryParse(b.seatNumber) ?? 0;
+        return aNum.compareTo(bNum);
+      });
+
+      return sortedSeats.where((seat) {
         final matchesSearch = seat.seatNumber.contains(searchQuery);
         final matchesStatus = statusFilter == null || seat.status == statusFilter;
         final matchesZone = zoneFilter == null || seat.zone == zoneFilter;

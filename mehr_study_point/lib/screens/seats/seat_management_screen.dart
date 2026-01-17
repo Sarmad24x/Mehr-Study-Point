@@ -35,6 +35,11 @@ class _SeatManagementScreenState extends ConsumerState<SeatManagementScreen> {
     });
   }
 
+  String _capitalize(String text) {
+    if (text.isEmpty) return text;
+    return text[0].toUpperCase() + text.substring(1).toLowerCase();
+  }
+
   @override
   Widget build(BuildContext context) {
     final seatsAsync = ref.watch(seatsStreamProvider);
@@ -139,7 +144,7 @@ class _SeatManagementScreenState extends ConsumerState<SeatManagementScreen> {
           ...SeatStatus.values.map((status) => Padding(
             padding: const EdgeInsets.only(right: 8.0),
             child: FilterChip(
-              label: Text(status.name),
+              label: Text(_capitalize(status.name)),
               selected: activeStatus == status,
               onSelected: (val) => ref.read(seatStatusFilterProvider.notifier).state = val ? status : null,
             ),
@@ -148,7 +153,7 @@ class _SeatManagementScreenState extends ConsumerState<SeatManagementScreen> {
           ...zones.map((zone) => Padding(
             padding: const EdgeInsets.only(right: 8.0),
             child: FilterChip(
-              label: Text(zone),
+              label: Text(_capitalize(zone)),
               selected: activeZone == zone,
               onSelected: (val) => ref.read(seatZoneFilterProvider.notifier).state = val ? zone : null,
             ),
@@ -162,6 +167,7 @@ class _SeatManagementScreenState extends ConsumerState<SeatManagementScreen> {
     final available = seats.where((s) => s.status == SeatStatus.available).length;
     final reserved = seats.where((s) => s.status == SeatStatus.reserved).length;
     final held = seats.where((s) => s.status == SeatStatus.held).length;
+    final maintenance = seats.where((s) => s.status == SeatStatus.maintenance).length;
 
     return Container(
       padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 16),
@@ -172,6 +178,7 @@ class _SeatManagementScreenState extends ConsumerState<SeatManagementScreen> {
           _buildSummaryItem('Available', available, Colors.green),
           _buildSummaryItem('Reserved', reserved, Colors.red),
           _buildSummaryItem('Held', held, Colors.blue),
+          _buildSummaryItem('Maintenance', maintenance, Colors.orange),
         ],
       ),
     );
@@ -219,6 +226,7 @@ class _SeatManagementScreenState extends ConsumerState<SeatManagementScreen> {
   }
 
   void _showSeatActionDialog(BuildContext context, SeatModel seat) {
+    // We need to use ref.read inside this callback
     final students = ref.read(studentsStreamProvider).value ?? [];
     final allFees = ref.read(feesStreamProvider).value ?? [];
     final currentUser = ref.read(userProfileProvider).value;
@@ -233,8 +241,7 @@ class _SeatManagementScreenState extends ConsumerState<SeatManagementScreen> {
           return AlertDialog(
             title: Row(
               children: [
-                Text('Seat ${seat.seatNumber}'),
-                const Spacer(),
+                Expanded(child: Text('Seat ${seat.seatNumber}')),
                 if (hasOverdue) const Icon(Icons.warning, color: Colors.red),
               ],
             ),
@@ -316,7 +323,6 @@ class _SeatManagementScreenState extends ConsumerState<SeatManagementScreen> {
   }
 
   void _showAssignExistingDialog(BuildContext context, WidgetRef ref, SeatModel seat, List<StudentModel> students, dynamic currentUser) {
-    // Show students who don't have a seat assigned
     final eligibleStudents = students.where((s) => s.assignedSeatId == null && s.status == 'Active').toList();
     
     showDialog(
@@ -337,16 +343,14 @@ class _SeatManagementScreenState extends ConsumerState<SeatManagementScreen> {
                     subtitle: Text(student.contactNumber),
                     onTap: () async {
                       if (currentUser != null) {
-                        // We use the swapSeat logic but oldSeat is null-safe 
-                        // Or we can just update seat and student directly
                         await ref.read(studentServiceProvider).updateStudent(
                           student.copyWith(assignedSeatId: seat.id, assignedSeatNumber: seat.seatNumber),
                           currentUser
                         );
                         await ref.read(seatServiceProvider).updateSeatStatus(seat.id, SeatStatus.reserved, studentId: student.id);
                         if (context.mounted) {
-                          Navigator.pop(context); // Close student picker
-                          Navigator.pop(context); // Close seat dialog
+                          Navigator.pop(context);
+                          Navigator.pop(context);
                         }
                       }
                     },
