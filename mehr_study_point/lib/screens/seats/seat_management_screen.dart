@@ -8,6 +8,7 @@ import '../../providers/student_provider.dart';
 import '../../providers/fee_provider.dart';
 import '../../models/seat_model.dart';
 import '../../models/fee_model.dart';
+import '../../models/student_model.dart';
 import '../students/add_student_screen.dart';
 import '../students/student_details_screen.dart';
 
@@ -39,6 +40,7 @@ class _SeatManagementScreenState extends ConsumerState<SeatManagementScreen> {
     final seatsAsync = ref.watch(seatsStreamProvider);
     final filteredSeats = ref.watch(filteredSeatsProvider);
     final currentUser = ref.watch(userProfileProvider).value;
+    final zones = ref.watch(seatZonesProvider);
 
     return Scaffold(
       appBar: AppBar(
@@ -59,12 +61,12 @@ class _SeatManagementScreenState extends ConsumerState<SeatManagementScreen> {
             ),
         ],
         bottom: PreferredSize(
-          preferredSize: const Size.fromHeight(110),
+          preferredSize: const Size.fromHeight(160),
           child: Column(
             children: [
               _buildSummaryHeader(filteredSeats),
               Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+                padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 4.0),
                 child: TextField(
                   onChanged: (value) =>
                       ref.read(seatSearchQueryProvider.notifier).state = value,
@@ -81,6 +83,7 @@ class _SeatManagementScreenState extends ConsumerState<SeatManagementScreen> {
                   ),
                 ),
               ),
+              _buildFilterChips(zones),
             ],
           ),
         ),
@@ -88,7 +91,7 @@ class _SeatManagementScreenState extends ConsumerState<SeatManagementScreen> {
       body: seatsAsync.when(
         data: (_) {
           if (filteredSeats.isEmpty) {
-            return const Center(child: Text('No seats found.'));
+            return const Center(child: Text('No seats match filters.'));
           }
           return GridView.builder(
             padding: const EdgeInsets.all(16),
@@ -119,6 +122,38 @@ class _SeatManagementScreenState extends ConsumerState<SeatManagementScreen> {
         },
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (e, _) => Center(child: Text('Error: $e')),
+      ),
+    );
+  }
+
+  Widget _buildFilterChips(List<String> zones) {
+    final activeStatus = ref.watch(seatStatusFilterProvider);
+    final activeZone = ref.watch(seatZoneFilterProvider);
+
+    return SingleChildScrollView(
+      scrollDirection: Axis.horizontal,
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+      child: Row(
+        children: [
+          // Status Chips
+          ...SeatStatus.values.map((status) => Padding(
+            padding: const EdgeInsets.only(right: 8.0),
+            child: FilterChip(
+              label: Text(status.name),
+              selected: activeStatus == status,
+              onSelected: (val) => ref.read(seatStatusFilterProvider.notifier).state = val ? status : null,
+            ),
+          )),
+          // Zone Chips
+          ...zones.map((zone) => Padding(
+            padding: const EdgeInsets.only(right: 8.0),
+            child: FilterChip(
+              label: Text(zone),
+              selected: activeZone == zone,
+              onSelected: (val) => ref.read(seatZoneFilterProvider.notifier).state = val ? zone : null,
+            ),
+          )),
+        ],
       ),
     );
   }
@@ -193,8 +228,6 @@ class _SeatManagementScreenState extends ConsumerState<SeatManagementScreen> {
       builder: (context) {
         if (seat.status == SeatStatus.reserved && seat.studentId != null) {
           final student = students.firstWhere((s) => s.id == seat.studentId, orElse: () => throw 'Student not found');
-          
-          // Maturity: Check for overdue fees
           final hasOverdue = allFees.any((f) => f.studentId == student.id && f.status == FeeStatus.overdue);
 
           return AlertDialog(
@@ -265,38 +298,66 @@ class _SeatManagementScreenState extends ConsumerState<SeatManagementScreen> {
             TextButton(onPressed: () => Navigator.pop(context), child: const Text('Close')),
             if (seat.status == SeatStatus.available) ...[
               TextButton(
-                onPressed: () async {
-                  // Maturity: Place on Hold for 3 days
-                  await ref.read(seatServiceProvider).updateSeatStatus(
-                    seat.id, 
-                    SeatStatus.held, 
-                    holdExpiresAt: DateTime.now().add(const Duration(days: 3))
-                  );
-                  if (context.mounted) Navigator.pop(context);
-                },
-                child: const Text('Place Hold (3 Days)'),
+                onPressed: () => _showAssignExistingDialog(context, ref, seat, students, currentUser),
+                child: const Text('Assign Existing'),
               ),
               ElevatedButton(
                 onPressed: () {
                   Navigator.pop(context);
                   Navigator.push(context, MaterialPageRoute(builder: (context) => const AddStudentScreen()));
                 },
-                child: const Text('Enroll Student'),
+                child: const Text('Enroll New'),
               ),
             ],
-            if (seat.status == SeatStatus.maintenance)
-              ElevatedButton(
-                onPressed: () async {
-                  if (currentUser != null) {
-                    await ref.read(seatServiceProvider).updateSeatStatus(seat.id, SeatStatus.available);
-                    if (context.mounted) Navigator.pop(context);
-                  }
-                },
-                child: const Text('Make Available'),
-              ),
           ],
         );
       },
+    );
+  }
+
+  void _showAssignExistingDialog(BuildContext context, WidgetRef ref, SeatModel seat, List<StudentModel> students, dynamic currentUser) {
+    // Show students who don't have a seat assigned
+    final eligibleStudents = students.where((s) => s.assignedSeatId == null && s.status == 'Active').toList();
+    
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Assign Existing Student'),
+        content: eligibleStudents.isEmpty 
+          ? const Text('No active students without seats found.')
+          : SizedBox(
+              width: double.maxFinite,
+              child: ListView.builder(
+                shrinkWrap: true,
+                itemCount: eligibleStudents.length,
+                itemBuilder: (context, index) {
+                  final student = eligibleStudents[index];
+                  return ListTile(
+                    title: Text(student.fullName),
+                    subtitle: Text(student.contactNumber),
+                    onTap: () async {
+                      if (currentUser != null) {
+                        // We use the swapSeat logic but oldSeat is null-safe 
+                        // Or we can just update seat and student directly
+                        await ref.read(studentServiceProvider).updateStudent(
+                          student.copyWith(assignedSeatId: seat.id, assignedSeatNumber: seat.seatNumber),
+                          currentUser
+                        );
+                        await ref.read(seatServiceProvider).updateSeatStatus(seat.id, SeatStatus.reserved, studentId: student.id);
+                        if (context.mounted) {
+                          Navigator.pop(context); // Close student picker
+                          Navigator.pop(context); // Close seat dialog
+                        }
+                      }
+                    },
+                  );
+                },
+              ),
+            ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancel')),
+        ],
+      ),
     );
   }
 }
