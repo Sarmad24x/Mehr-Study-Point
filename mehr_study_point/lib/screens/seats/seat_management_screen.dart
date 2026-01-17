@@ -3,7 +3,10 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../providers/seat_provider.dart';
 import '../../providers/service_providers.dart';
 import '../../providers/auth_provider.dart';
+import '../../providers/student_provider.dart';
 import '../../models/seat_model.dart';
+import '../students/add_student_screen.dart';
+import '../students/student_details_screen.dart';
 
 class SeatManagementScreen extends ConsumerStatefulWidget {
   const SeatManagementScreen({super.key});
@@ -178,7 +181,66 @@ class _SeatManagementScreenState extends ConsumerState<SeatManagementScreen> {
   }
 
   void _showSeatActionDialog(BuildContext context, SeatModel seat) {
-    // Implement seat details/assignment/hold logic here
+    final students = ref.read(studentsStreamProvider).value ?? [];
+    final currentUser = ref.read(userProfileProvider).value;
+
+    showDialog(
+      context: context,
+      builder: (context) {
+        if (seat.status == SeatStatus.reserved && seat.studentId != null) {
+          final student = students.firstWhere((s) => s.id == seat.studentId, orElse: () => throw 'Student not found');
+          return AlertDialog(
+            title: Text('Seat ${seat.seatNumber} - Reserved'),
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text('Occupied by: ${student.fullName}', style: const TextStyle(fontWeight: FontWeight.bold)),
+                Text('Contact: ${student.contactNumber}'),
+              ],
+            ),
+            actions: [
+              TextButton(onPressed: () => Navigator.pop(context), child: const Text('Close')),
+              ElevatedButton(
+                onPressed: () {
+                  Navigator.pop(context);
+                  Navigator.push(context, MaterialPageRoute(builder: (context) => StudentDetailsScreen(student: student)));
+                },
+                child: const Text('View Profile'),
+              ),
+            ],
+          );
+        }
+
+        return AlertDialog(
+          title: Text('Seat ${seat.seatNumber} - ${seat.status.name.toUpperCase()}'),
+          content: Text(seat.status == SeatStatus.available 
+            ? 'This seat is currently available for enrollment.' 
+            : 'This seat is under maintenance.'),
+          actions: [
+            TextButton(onPressed: () => Navigator.pop(context), child: const Text('Close')),
+            if (seat.status == SeatStatus.available)
+              ElevatedButton(
+                onPressed: () {
+                  Navigator.pop(context);
+                  Navigator.push(context, MaterialPageRoute(builder: (context) => const AddStudentScreen()));
+                },
+                child: const Text('Enroll Student'),
+              ),
+            if (seat.status == SeatStatus.maintenance)
+              ElevatedButton(
+                onPressed: () async {
+                  if (currentUser != null) {
+                    await ref.read(seatServiceProvider).updateSeatStatus(seat.id, SeatStatus.available);
+                    if (context.mounted) Navigator.pop(context);
+                  }
+                },
+                child: const Text('Make Available'),
+              ),
+          ],
+        );
+      },
+    );
   }
 }
 
