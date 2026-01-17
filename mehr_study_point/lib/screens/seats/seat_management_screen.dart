@@ -1,10 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:intl/intl.dart';
 import '../../providers/seat_provider.dart';
 import '../../providers/service_providers.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/student_provider.dart';
+import '../../providers/fee_provider.dart';
 import '../../models/seat_model.dart';
+import '../../models/fee_model.dart';
 import '../students/add_student_screen.dart';
 import '../students/student_details_screen.dart';
 
@@ -123,7 +126,7 @@ class _SeatManagementScreenState extends ConsumerState<SeatManagementScreen> {
   Widget _buildSummaryHeader(List<SeatModel> seats) {
     final available = seats.where((s) => s.status == SeatStatus.available).length;
     final reserved = seats.where((s) => s.status == SeatStatus.reserved).length;
-    final maintenance = seats.where((s) => s.status == SeatStatus.maintenance).length;
+    final held = seats.where((s) => s.status == SeatStatus.held).length;
 
     return Container(
       padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 16),
@@ -133,7 +136,7 @@ class _SeatManagementScreenState extends ConsumerState<SeatManagementScreen> {
         children: [
           _buildSummaryItem('Available', available, Colors.green),
           _buildSummaryItem('Reserved', reserved, Colors.red),
-          _buildSummaryItem('Repair', maintenance, Colors.orange),
+          _buildSummaryItem('Held', held, Colors.blue),
         ],
       ),
     );
@@ -182,6 +185,7 @@ class _SeatManagementScreenState extends ConsumerState<SeatManagementScreen> {
 
   void _showSeatActionDialog(BuildContext context, SeatModel seat) {
     final students = ref.read(studentsStreamProvider).value ?? [];
+    final allFees = ref.read(feesStreamProvider).value ?? [];
     final currentUser = ref.read(userProfileProvider).value;
 
     showDialog(
@@ -189,14 +193,29 @@ class _SeatManagementScreenState extends ConsumerState<SeatManagementScreen> {
       builder: (context) {
         if (seat.status == SeatStatus.reserved && seat.studentId != null) {
           final student = students.firstWhere((s) => s.id == seat.studentId, orElse: () => throw 'Student not found');
+          
+          // Maturity: Check for overdue fees
+          final hasOverdue = allFees.any((f) => f.studentId == student.id && f.status == FeeStatus.overdue);
+
           return AlertDialog(
-            title: Text('Seat ${seat.seatNumber} - Reserved'),
+            title: Row(
+              children: [
+                Text('Seat ${seat.seatNumber}'),
+                const Spacer(),
+                if (hasOverdue) const Icon(Icons.warning, color: Colors.red),
+              ],
+            ),
             content: Column(
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text('Occupied by: ${student.fullName}', style: const TextStyle(fontWeight: FontWeight.bold)),
                 Text('Contact: ${student.contactNumber}'),
+                if (hasOverdue)
+                  const Padding(
+                    padding: EdgeInsets.only(top: 8.0),
+                    child: Text('⚠️ HAS OVERDUE FEES', style: TextStyle(color: Colors.red, fontWeight: FontWeight.bold, fontSize: 12)),
+                  ),
               ],
             ),
             actions: [
@@ -212,6 +231,31 @@ class _SeatManagementScreenState extends ConsumerState<SeatManagementScreen> {
           );
         }
 
+        if (seat.status == SeatStatus.held) {
+          return AlertDialog(
+            title: Text('Seat ${seat.seatNumber} - On Hold'),
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Text('This seat is temporarily held.'),
+                if (seat.holdExpiresAt != null)
+                  Text('Expires on: ${DateFormat('dd MMM').format(seat.holdExpiresAt!)}', 
+                    style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.blue)),
+              ],
+            ),
+            actions: [
+              TextButton(onPressed: () => Navigator.pop(context), child: const Text('Close')),
+              ElevatedButton(
+                onPressed: () async {
+                  await ref.read(seatServiceProvider).updateSeatStatus(seat.id, SeatStatus.available);
+                  if (context.mounted) Navigator.pop(context);
+                },
+                child: const Text('Release Hold'),
+              ),
+            ],
+          );
+        }
+
         return AlertDialog(
           title: Text('Seat ${seat.seatNumber} - ${seat.status.name.toUpperCase()}'),
           content: Text(seat.status == SeatStatus.available 
@@ -219,7 +263,19 @@ class _SeatManagementScreenState extends ConsumerState<SeatManagementScreen> {
             : 'This seat is under maintenance.'),
           actions: [
             TextButton(onPressed: () => Navigator.pop(context), child: const Text('Close')),
-            if (seat.status == SeatStatus.available)
+            if (seat.status == SeatStatus.available) ...[
+              TextButton(
+                onPressed: () async {
+                  // Maturity: Place on Hold for 3 days
+                  await ref.read(seatServiceProvider).updateSeatStatus(
+                    seat.id, 
+                    SeatStatus.held, 
+                    holdExpiresAt: DateTime.now().add(const Duration(days: 3))
+                  );
+                  if (context.mounted) Navigator.pop(context);
+                },
+                child: const Text('Place Hold (3 Days)'),
+              ),
               ElevatedButton(
                 onPressed: () {
                   Navigator.pop(context);
@@ -227,6 +283,7 @@ class _SeatManagementScreenState extends ConsumerState<SeatManagementScreen> {
                 },
                 child: const Text('Enroll Student'),
               ),
+            ],
             if (seat.status == SeatStatus.maintenance)
               ElevatedButton(
                 onPressed: () async {
