@@ -72,4 +72,31 @@ class StudentModel {
       monthlyFee: (map['monthlyFee'] as num?)?.toDouble() ?? 2000.0,
     );
   }
+
+  StudentModel copyWith({
+    String? fullName,
+    String? contactNumber,
+    String? guardianName,
+    String? guardianContact,
+    String? address,
+    DateTime? admissionDate,
+    String? status,
+    String? assignedSeatId,
+    String? assignedSeatNumber,
+    double? monthlyFee,
+  }) {
+    return StudentModel(
+      id: id,
+      fullName: fullName ?? this.fullName,
+      contactNumber: contactNumber ?? this.contactNumber,
+      guardianName: guardianName ?? this.guardianName,
+      guardianContact: guardianContact ?? this.guardianContact,
+      address: address ?? this.address,
+      admissionDate: admissionDate ?? this.admissionDate,
+      status: status ?? this.status,
+      assignedSeatId: assignedSeatId ?? this.assignedSeatId,
+      assignedSeatNumber: assignedSeatNumber ?? this.assignedSeatNumber,
+      monthlyFee: monthlyFee ?? this.monthlyFee,
+    );
+  }
 }
