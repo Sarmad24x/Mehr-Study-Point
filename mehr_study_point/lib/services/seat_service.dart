@@ -5,6 +5,7 @@ import '../models/audit_log_model.dart';
 import '../models/user_model.dart';
 import 'hive_service.dart';
 import 'audit_service.dart';
+import 'package:uuid/uuid.dart';
 
 class SeatService {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
@@ -41,13 +42,54 @@ class SeatService {
     });
   }
 
+  // ADD SEAT Logic
+  Future<void> addSeat(String seatNumber, String? zone, UserModel currentUser) async {
+    final id = const Uuid().v4();
+    final seat = SeatModel(
+      id: id,
+      seatNumber: seatNumber,
+      status: SeatStatus.available,
+      zone: zone,
+    );
+    await _firestore.collection('seats').doc(id).set(seat.toMap());
+
+    if (_auditService != null) {
+      await _auditService!.logAction(AuditLogModel(
+        id: '',
+        userId: currentUser.id,
+        userName: currentUser.name,
+        action: 'CREATE',
+        entityType: 'Seat',
+        entityId: id,
+        newValues: seat.toMap(),
+        timestamp: DateTime.now(),
+      ));
+    }
+  }
+
+  // DELETE SEAT Logic
+  Future<void> deleteSeat(String seatId, UserModel currentUser) async {
+    await _firestore.collection('seats').doc(seatId).delete();
+
+    if (_auditService != null) {
+      await _auditService!.logAction(AuditLogModel(
+        id: '',
+        userId: currentUser.id,
+        userName: currentUser.name,
+        action: 'DELETE',
+        entityType: 'Seat',
+        entityId: seatId,
+        timestamp: DateTime.now(),
+      ));
+    }
+  }
+
   // BULK UPDATE Logic
   Future<void> bulkUpdateSeats(List<String> seatIds, SeatStatus newStatus, UserModel currentUser) async {
     final batch = _firestore.batch();
     for (var id in seatIds) {
       batch.update(_firestore.collection('seats').doc(id), {
         'status': newStatus.name,
-        // If moving to available or maintenance, clear student data
         if (newStatus == SeatStatus.available || newStatus == SeatStatus.maintenance) 'studentId': null,
         if (newStatus == SeatStatus.available || newStatus == SeatStatus.maintenance) 'holdExpiresAt': null,
       });

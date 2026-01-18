@@ -9,6 +9,7 @@ import '../../providers/fee_provider.dart';
 import '../../models/seat_model.dart';
 import '../../models/fee_model.dart';
 import '../../models/student_model.dart';
+import '../../models/user_model.dart';
 import '../students/add_student_screen.dart';
 import '../students/student_details_screen.dart';
 
@@ -44,17 +45,24 @@ class _SeatManagementScreenState extends ConsumerState<SeatManagementScreen> {
   Widget build(BuildContext context) {
     final seatsAsync = ref.watch(seatsStreamProvider);
     final filteredSeats = ref.watch(filteredSeatsProvider);
-    final currentUser = ref.watch(userProfileProvider).value;
+    final userProfile = ref.watch(userProfileProvider).value;
+    final isAdmin = userProfile?.role == UserRole.admin;
     final zones = ref.watch(seatZonesProvider);
 
     return Scaffold(
       appBar: AppBar(
         title: Text(_isSelectionMode ? '${_selectedSeatIds.length} Selected' : 'Seat Management'),
         actions: [
+          if (!_isSelectionMode && isAdmin)
+            IconButton(
+              icon: const Icon(Icons.add),
+              tooltip: 'Add New Seat',
+              onPressed: () => _showAddSeatDialog(context, ref, userProfile!),
+            ),
           if (_isSelectionMode)
             IconButton(
               icon: const Icon(Icons.edit_attributes),
-              onPressed: () => _showBulkUpdateDialog(context, ref, currentUser),
+              onPressed: () => _showBulkUpdateDialog(context, ref, userProfile),
             ),
           if (_isSelectionMode)
             IconButton(
@@ -120,7 +128,9 @@ class _SeatManagementScreenState extends ConsumerState<SeatManagementScreen> {
                     _showSeatActionDialog(context, seat);
                   }
                 },
-                onLongPress: () => _toggleSelection(seat.id),
+                onLongPress: () {
+                  if (isAdmin) _toggleSelection(seat.id);
+                },
               );
             },
           );
@@ -140,7 +150,6 @@ class _SeatManagementScreenState extends ConsumerState<SeatManagementScreen> {
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
       child: Row(
         children: [
-          // Status Chips
           ...SeatStatus.values.map((status) => Padding(
             padding: const EdgeInsets.only(right: 8.0),
             child: FilterChip(
@@ -149,7 +158,6 @@ class _SeatManagementScreenState extends ConsumerState<SeatManagementScreen> {
               onSelected: (val) => ref.read(seatStatusFilterProvider.notifier).state = val ? status : null,
             ),
           )),
-          // Zone Chips
           ...zones.map((zone) => Padding(
             padding: const EdgeInsets.only(right: 8.0),
             child: FilterChip(
@@ -178,7 +186,7 @@ class _SeatManagementScreenState extends ConsumerState<SeatManagementScreen> {
           _buildSummaryItem('Available', available, Colors.green),
           _buildSummaryItem('Reserved', reserved, Colors.red),
           _buildSummaryItem('Held', held, Colors.blue),
-          _buildSummaryItem('Maintenance', maintenance, Colors.orange),
+          _buildSummaryItem('Repair', maintenance, Colors.orange),
         ],
       ),
     );
@@ -190,6 +198,48 @@ class _SeatManagementScreenState extends ConsumerState<SeatManagementScreen> {
         Text(count.toString(), style: TextStyle(fontWeight: FontWeight.bold, color: color, fontSize: 18)),
         Text(label, style: const TextStyle(fontSize: 10, color: Colors.grey)),
       ],
+    );
+  }
+
+  void _showAddSeatDialog(BuildContext context, WidgetRef ref, UserModel currentUser) {
+    final numberController = TextEditingController();
+    final zoneController = TextEditingController();
+
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Add New Seat'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            TextField(
+              controller: numberController,
+              decoration: const InputDecoration(labelText: 'Seat Number (e.g. 161)'),
+              keyboardType: TextInputType.number,
+            ),
+            TextField(
+              controller: zoneController,
+              decoration: const InputDecoration(labelText: 'Zone (Optional)'),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancel')),
+          ElevatedButton(
+            onPressed: () async {
+              if (numberController.text.isNotEmpty) {
+                await ref.read(seatServiceProvider).addSeat(
+                  numberController.text.trim(),
+                  zoneController.text.trim().isEmpty ? null : zoneController.text.trim(),
+                  currentUser,
+                );
+                if (context.mounted) Navigator.pop(context);
+              }
+            },
+            child: const Text('Add Seat'),
+          ),
+        ],
+      ),
     );
   }
 
@@ -226,10 +276,10 @@ class _SeatManagementScreenState extends ConsumerState<SeatManagementScreen> {
   }
 
   void _showSeatActionDialog(BuildContext context, SeatModel seat) {
-    // We need to use ref.read inside this callback
     final students = ref.read(studentsStreamProvider).value ?? [];
     final allFees = ref.read(feesStreamProvider).value ?? [];
-    final currentUser = ref.read(userProfileProvider).value;
+    final userProfile = ref.read(userProfileProvider).value;
+    final isAdmin = userProfile?.role == UserRole.admin;
 
     showDialog(
       context: context,
@@ -298,14 +348,45 @@ class _SeatManagementScreenState extends ConsumerState<SeatManagementScreen> {
 
         return AlertDialog(
           title: Text('Seat ${seat.seatNumber} - ${seat.status.name.toUpperCase()}'),
-          content: Text(seat.status == SeatStatus.available 
-            ? 'This seat is currently available for enrollment.' 
-            : 'This seat is under maintenance.'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(seat.status == SeatStatus.available 
+                ? 'This seat is currently available for enrollment.' 
+                : 'This seat is under maintenance.'),
+              if (isAdmin) ...[
+                const Divider(),
+                TextButton.icon(
+                  icon: const Icon(Icons.delete, color: Colors.red),
+                  label: const Text('Delete Seat permanently', style: TextStyle(color: Colors.red)),
+                  onPressed: () async {
+                    final confirm = await showDialog<bool>(
+                      context: context,
+                      builder: (ctx) => AlertDialog(
+                        title: const Text('Delete Seat?'),
+                        content: const Text('Are you sure you want to remove this seat from the system?'),
+                        actions: [
+                          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('No')),
+                          TextButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('Yes')),
+                        ],
+                      ),
+                    );
+                    if (confirm == true) {
+                      await ref.read(seatServiceProvider).deleteSeat(seat.id, userProfile!);
+                      if (context.mounted) {
+                        Navigator.pop(context); // Close action dialog
+                      }
+                    }
+                  },
+                ),
+              ],
+            ],
+          ),
           actions: [
             TextButton(onPressed: () => Navigator.pop(context), child: const Text('Close')),
             if (seat.status == SeatStatus.available) ...[
               TextButton(
-                onPressed: () => _showAssignExistingDialog(context, ref, seat, students, currentUser),
+                onPressed: () => _showAssignExistingDialog(context, ref, seat, students, userProfile),
                 child: const Text('Assign Existing'),
               ),
               ElevatedButton(
