@@ -43,4 +43,37 @@ class AuthService {
   Future<void> createUserInFirestore(UserModel user) async {
     await _firestore.collection('users').doc(user.id).set(user.toMap());
   }
+
+  // MATURE: Create Employee Account (Auth + Firestore)
+  Future<void> registerEmployee({
+    required String email,
+    required String password,
+    required String name,
+  }) async {
+    try {
+      // 1. Create the user in Firebase Auth
+      UserCredential credential = await _auth.createUserWithEmailAndPassword(
+        email: email,
+        password: password,
+      );
+
+      if (credential.user != null) {
+        // 2. Create the user profile in Firestore
+        final newUser = UserModel(
+          id: credential.user!.uid,
+          email: email,
+          name: name,
+          role: UserRole.employee,
+        );
+        await createUserInFirestore(newUser);
+      }
+    } catch (e) {
+      rethrow;
+    }
+  }
+
+  // Delete User (Firestore + potentially Auth via Cloud Functions in future)
+  Future<void> deleteUserAccount(String uid) async {
+    await _firestore.collection('users').doc(uid).delete();
+  }
 }
