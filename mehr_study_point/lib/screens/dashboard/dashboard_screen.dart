@@ -1,13 +1,17 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
+import 'package:fl_chart/fl_chart.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/dashboard_provider.dart';
 import '../../providers/service_providers.dart';
 import '../../providers/student_provider.dart';
 import '../../providers/fee_provider.dart';
 import '../../models/user_model.dart';
+import '../../models/seat_model.dart';
+import '../../models/student_model.dart';
 import '../../models/fee_model.dart';
+
 
 class DashboardScreen extends ConsumerWidget {
   const DashboardScreen({super.key});
@@ -17,7 +21,6 @@ class DashboardScreen extends ConsumerWidget {
     final userProfile = ref.watch(userProfileProvider).value;
     final stats = ref.watch(dashboardStatsProvider);
 
-    // Run the New Month Check
     if (userProfile?.role == UserRole.admin) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         _checkAndPromptMonthlyFees(context, ref);
@@ -26,86 +29,165 @@ class DashboardScreen extends ConsumerWidget {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Dashboard'),
+        title: const Text('Mehr Study Point'),
+        centerTitle: true,
       ),
       body: RefreshIndicator(
-        onRefresh: () async {
-          // Streams will auto-refresh
-        },
+        onRefresh: () async => ref.refresh(dashboardStatsProvider),
         child: SingleChildScrollView(
           physics: const AlwaysScrollableScrollPhysics(),
           padding: const EdgeInsets.all(16.0),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(
-                'Welcome, ${userProfile?.name ?? 'User'}',
-                style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                      fontWeight: FontWeight.bold,
-                    ),
+              Row(
+                children: [
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Welcome, ${userProfile?.name ?? 'User'}',
+                        style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                              fontWeight: FontWeight.bold,
+                            ),
+                      ),
+                      Text(
+                        DateFormat('EEEE, dd MMMM').format(DateTime.now()),
+                        style: const TextStyle(color: Colors.grey),
+                      ),
+                    ],
+                  ),
+                  const Spacer(),
+                  CircleAvatar(
+                    backgroundColor: Colors.blue.shade100,
+                    child: const Icon(Icons.person, color: Colors.blue),
+                  ),
+                ],
               ),
               const SizedBox(height: 24),
+              
+              // Stat Cards
               GridView.count(
                 shrinkWrap: true,
                 physics: const NeverScrollableScrollPhysics(),
                 crossAxisCount: 2,
-                crossAxisSpacing: 16,
-                mainAxisSpacing: 16,
+                crossAxisSpacing: 12,
+                mainAxisSpacing: 12,
+                childAspectRatio: 1.5,
                 children: [
-                  _buildStatCard(
-                    context,
-                    title: 'Total Seats',
-                    value: stats.totalSeats.toString(),
-                    icon: Icons.event_seat,
-                    color: Colors.blue,
-                  ),
-                  _buildStatCard(
-                    context,
-                    title: 'Active Students',
-                    value: stats.activeStudents.toString(),
-                    icon: Icons.people,
-                    color: Colors.green,
-                  ),
-                  _buildStatCard(
-                    context,
-                    title: 'Pending Fees',
-                    value: 'Rs. ${stats.pendingFees.toStringAsFixed(0)}',
-                    icon: Icons.account_balance_wallet,
-                    color: Colors.orange,
-                  ),
-                  _buildStatCard(
-                    context,
-                    title: 'Available Seats',
-                    value: stats.availableSeats.toString(),
-                    icon: Icons.check_circle,
-                    color: Colors.teal,
+                  _buildStatCard(context, 'Active Students', stats.activeStudents.toString(), Icons.people, Colors.green),
+                  _buildStatCard(context, 'Pending Fees', 'Rs. ${stats.pendingFees.toInt()}', Icons.account_balance_wallet, Colors.orange),
+                ],
+              ),
+              const SizedBox(height: 24),
+
+              // Visual Charts Row
+              Row(
+                children: [
+                  Expanded(
+                    child: _buildChartCard(
+                      context, 
+                      title: 'Seat Occupancy',
+                      chart: _buildOccupancyPie(stats),
+                    ),
                   ),
                 ],
               ),
-              const SizedBox(height: 32),
+              const SizedBox(height: 24),
+
               Text(
-                'Status Overview',
-                style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                      fontWeight: FontWeight.bold,
-                    ),
+                'Today\'s Overview',
+                style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
               ),
               const SizedBox(height: 16),
-              Card(
-                child: Padding(
-                  padding: const EdgeInsets.all(16.0),
-                  child: Column(
-                    children: [
-                      _buildSummaryRow('Occupancy', 
-                        '${stats.totalSeats > 0 ? ((stats.totalSeats - stats.availableSeats) / stats.totalSeats * 100).toStringAsFixed(1) : 0}%'),
-                      const Divider(),
-                      _buildSummaryRow('Current Month', DateFormat('MMMM yyyy').format(DateTime.now())),
-                    ],
-                  ),
-                ),
-              ),
+              _buildSummaryTile(context, 'Total Seats', stats.totalSeats.toString(), Icons.event_seat, Colors.blue),
+              _buildSummaryTile(context, 'Available Now', stats.availableSeats.toString(), Icons.check_circle, Colors.teal),
+              
+              const SizedBox(height: 100), // Extra space for bottom nav
             ],
           ),
         ),
+      ),
+    );
+  }
+
+  Widget _buildChartCard(BuildContext context, {required String title, required Widget chart}) {
+    return Card(
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      elevation: 0,
+      color: Colors.blue.shade50.withOpacity(0.5),
+      child: Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(title, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+            const SizedBox(height: 20),
+            SizedBox(height: 200, child: chart),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildOccupancyPie(DashboardStats stats) {
+    final reserved = stats.totalSeats - stats.availableSeats;
+    if (stats.totalSeats == 0) return const Center(child: Text('No data'));
+
+    return PieChart(
+      PieChartData(
+        sectionsSpace: 2,
+        centerSpaceRadius: 40,
+        sections: [
+          PieChartSectionData(
+            value: stats.availableSeats.toDouble(),
+            title: '${stats.availableSeats}',
+            color: Colors.green,
+            radius: 50,
+            titleStyle: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+          ),
+          PieChartSectionData(
+            value: reserved.toDouble(),
+            title: '$reserved',
+            color: Colors.red,
+            radius: 50,
+            titleStyle: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildSummaryTile(BuildContext context, String label, String value, IconData icon, Color color) {
+    return Card(
+      margin: const EdgeInsets.only(bottom: 8),
+      elevation: 0,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12), side: BorderSide(color: Colors.grey.shade200)),
+      child: ListTile(
+        leading: Icon(icon, color: color),
+        title: Text(label),
+        trailing: Text(value, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+      ),
+    );
+  }
+
+  Widget _buildStatCard(BuildContext context, String title, String value, IconData icon, Color color) {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: color.withOpacity(0.1),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: color.withOpacity(0.2)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(icon, color: color, size: 24),
+          const SizedBox(height: 8),
+          Text(value, style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: color)),
+          Text(title, style: TextStyle(fontSize: 12, color: color.withOpacity(0.8))),
+        ],
       ),
     );
   }
@@ -114,7 +196,6 @@ class DashboardScreen extends ConsumerWidget {
     final fees = ref.read(feesStreamProvider).value ?? [];
     final currentMonthStr = DateFormat('MMMM yyyy').format(DateTime.now());
     
-    // Check if any 'Monthly' fee exists for this month
     final alreadyGenerated = fees.any((f) => 
       f.type == 'Monthly' && 
       DateFormat('MMMM yyyy').format(f.dueDate) == currentMonthStr
@@ -140,7 +221,6 @@ class DashboardScreen extends ConsumerWidget {
         final currentUser = ref.read(userProfileProvider).value;
         final students = ref.read(studentsStreamProvider).value ?? [];
         if (currentUser != null) {
-          // For bulk generation, we'll use each student's specific rate
           int count = 0;
           for (var student in students) {
             if (student.status == 'Active') {
@@ -165,56 +245,5 @@ class DashboardScreen extends ConsumerWidget {
         }
       }
     }
-  }
-
-  Widget _buildSummaryRow(String label, String value) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 8.0),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          Text(label, style: const TextStyle(fontSize: 16)),
-          Text(value, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildStatCard(
-    BuildContext context, {
-    required String title,
-    required String value,
-    required IconData icon,
-    required Color color,
-  }) {
-    return Card(
-      elevation: 2,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-      child: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(icon, size: 32, color: color),
-            const SizedBox(height: 12),
-            FittedBox(
-              fit: BoxFit.scaleDown,
-              child: Text(
-                value,
-                style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                      fontWeight: FontWeight.bold,
-                    ),
-              ),
-            ),
-            const SizedBox(height: 4),
-            Text(
-              title,
-              textAlign: TextAlign.center,
-              style: const TextStyle(color: Colors.grey, fontSize: 12),
-            ),
-          ],
-        ),
-      ),
-    );
   }
 }
