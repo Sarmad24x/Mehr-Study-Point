@@ -7,18 +7,23 @@ final studentsStreamProvider = StreamProvider<List<StudentModel>>((ref) {
 });
 
 final studentSearchQueryProvider = StateProvider<String>((ref) => '');
+final studentStatusFilterProvider = StateProvider<String?>((ref) => 'Active'); // Default to Active
 
 final filteredStudentsProvider = Provider<List<StudentModel>>((ref) {
   final studentsAsync = ref.watch(studentsStreamProvider);
   final searchQuery = ref.watch(studentSearchQueryProvider).toLowerCase();
+  final statusFilter = ref.watch(studentStatusFilterProvider);
 
   return studentsAsync.when(
     data: (students) {
-      if (searchQuery.isEmpty) return students;
       return students.where((student) {
-        return student.fullName.toLowerCase().contains(searchQuery) ||
+        final matchesSearch = student.fullName.toLowerCase().contains(searchQuery) ||
             student.contactNumber.contains(searchQuery) ||
             (student.assignedSeatNumber?.contains(searchQuery) ?? false);
+        
+        final matchesStatus = statusFilter == null || student.status == statusFilter;
+        
+        return matchesSearch && matchesStatus;
       }).toList();
     },
     loading: () => [],
