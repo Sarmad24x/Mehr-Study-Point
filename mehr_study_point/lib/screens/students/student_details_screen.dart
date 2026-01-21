@@ -8,6 +8,7 @@ import '../../providers/service_providers.dart';
 import '../../providers/seat_provider.dart';
 import '../../providers/fee_provider.dart';
 import 'add_student_screen.dart';
+import '../../models/seat_model.dart';
 
 class StudentDetailsScreen extends ConsumerWidget {
   final StudentModel student;
