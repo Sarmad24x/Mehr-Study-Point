@@ -28,6 +28,7 @@ class StudentListScreen extends ConsumerWidget {
                   decoration: InputDecoration(
                     hintText: 'Search by name, contact or seat...',
                     prefixIcon: const Icon(Icons.search),
+                    suffixIcon: const Icon(Icons.phone_android, size: 18, color: Colors.grey),
                     filled: true,
                     fillColor: Colors.white,
                     isDense: true,
@@ -45,7 +46,7 @@ class StudentListScreen extends ConsumerWidget {
                   children: [
                     _filterChip(ref, 'Active', currentFilter),
                     const SizedBox(width: 8),
-                    _filterChip(ref, 'Archived', currentFilter),
+                    _filterChip(ref, 'Archived', currentFilter, label: 'Left'),
                     const SizedBox(width: 8),
                     _filterChip(ref, null, currentFilter, label: 'All'),
                   ],
@@ -84,9 +85,15 @@ class StudentListScreen extends ConsumerWidget {
                       color: isArchived ? Colors.grey : null,
                     ),
                   ),
-                  subtitle: Text(isArchived 
-                    ? 'Status: Left' 
-                    : 'Seat: ${student.assignedSeatNumber ?? 'None'}'),
+                  subtitle: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(isArchived 
+                        ? 'Status: Left' 
+                        : 'Seat: ${student.assignedSeatNumber ?? 'None'}'),
+                      Text('Contact: ${student.contactNumber}', style: const TextStyle(fontSize: 12)),
+                    ],
+                  ),
                   trailing: const Icon(Icons.chevron_right),
                   onTap: () {
                     Navigator.push(
