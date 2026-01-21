@@ -7,11 +7,12 @@ import '../../providers/dashboard_provider.dart';
 import '../../providers/service_providers.dart';
 import '../../providers/student_provider.dart';
 import '../../providers/fee_provider.dart';
+import '../../providers/seat_provider.dart';
 import '../../models/user_model.dart';
 import '../../models/seat_model.dart';
 import '../../models/student_model.dart';
 import '../../models/fee_model.dart';
-
+import '../students/student_details_screen.dart';
 
 class DashboardScreen extends ConsumerWidget {
   const DashboardScreen({super.key});
@@ -20,12 +21,21 @@ class DashboardScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final userProfile = ref.watch(userProfileProvider).value;
     final stats = ref.watch(dashboardStatsProvider);
+    final students = ref.watch(studentsStreamProvider).value ?? [];
+    final seats = ref.watch(seatsStreamProvider).value ?? [];
 
     if (userProfile?.role == UserRole.admin) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         _checkAndPromptMonthlyFees(context, ref);
       });
     }
+
+    // Get 3 most recent active students
+    final recentStudents = students
+        .where((s) => s.status == 'Active')
+        .toList()
+      ..sort((a, b) => b.admissionDate.compareTo(a.admissionDate));
+    final displayStudents = recentStudents.take(3).toList();
 
     return Scaffold(
       appBar: AppBar(
@@ -82,31 +92,84 @@ class DashboardScreen extends ConsumerWidget {
               const SizedBox(height: 24),
 
               // Visual Charts Row
-              Row(
-                children: [
-                  Expanded(
-                    child: _buildChartCard(
-                      context, 
-                      title: 'Seat Occupancy',
-                      chart: _buildOccupancyPie(stats),
-                    ),
-                  ),
-                ],
+              _buildChartCard(
+                context, 
+                title: 'Seat Occupancy',
+                chart: _buildOccupancyPie(stats),
               ),
               const SizedBox(height: 24),
 
+              // Recent Students Section (Using StudentModel)
+              if (displayStudents.isNotEmpty) ...[
+                Text(
+                  'Recent Enrollments',
+                  style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
+                ),
+                const SizedBox(height: 12),
+                ...displayStudents.map((student) => Card(
+                  margin: const EdgeInsets.only(bottom: 8),
+                  child: ListTile(
+                    leading: CircleAvatar(
+                      child: Text(student.fullName[0].toUpperCase()),
+                    ),
+                    title: Text(student.fullName),
+                    subtitle: Text('Seat: ${student.assignedSeatNumber ?? 'N/A'}'),
+                    trailing: Text(DateFormat('dd MMM').format(student.admissionDate)),
+                    onTap: () => Navigator.push(
+                      context, 
+                      MaterialPageRoute(builder: (context) => StudentDetailsScreen(student: student)),
+                    ),
+                  ),
+                )),
+                const SizedBox(height: 24),
+              ],
+
+              // Zone Breakdown (Using SeatModel)
               Text(
-                'Today\'s Overview',
+                'Zone Summary',
                 style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
               ),
-              const SizedBox(height: 16),
-              _buildSummaryTile(context, 'Total Seats', stats.totalSeats.toString(), Icons.event_seat, Colors.blue),
-              _buildSummaryTile(context, 'Available Now', stats.availableSeats.toString(), Icons.check_circle, Colors.teal),
-              
-              const SizedBox(height: 100), // Extra space for bottom nav
+              const SizedBox(height: 12),
+              _buildZoneSummary(seats),
+
+              const SizedBox(height: 100), 
             ],
           ),
         ),
+      ),
+    );
+  }
+
+  Widget _buildZoneSummary(List<SeatModel> seats) {
+    if (seats.isEmpty) return const Card(child: ListTile(title: Text('No seats initialized')));
+    
+    final zones = seats.map((s) => s.zone ?? 'General').toSet().toList();
+    zones.sort();
+
+    return Card(
+      child: ListView.separated(
+        shrinkWrap: true,
+        physics: const NeverScrollableScrollPhysics(),
+        itemCount: zones.length,
+        separatorBuilder: (context, index) => const Divider(height: 1),
+        itemBuilder: (context, index) {
+          final zone = zones[index];
+          final zoneSeats = seats.where((s) => (s.zone ?? 'General') == zone).toList();
+          final occupied = zoneSeats.where((s) => s.status == SeatStatus.reserved).length;
+          
+          return ListTile(
+            title: Text(zone),
+            subtitle: Text('Occupancy: $occupied / ${zoneSeats.length}'),
+            trailing: SizedBox(
+              width: 100,
+              child: LinearProgressIndicator(
+                value: zoneSeats.isEmpty ? 0 : occupied / zoneSeats.length,
+                backgroundColor: Colors.grey.shade200,
+                color: (occupied / zoneSeats.length) > 0.8 ? Colors.red : Colors.blue,
+              ),
+            ),
+          );
+        },
       ),
     );
   }
@@ -154,19 +217,6 @@ class DashboardScreen extends ConsumerWidget {
             titleStyle: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
           ),
         ],
-      ),
-    );
-  }
-
-  Widget _buildSummaryTile(BuildContext context, String label, String value, IconData icon, Color color) {
-    return Card(
-      margin: const EdgeInsets.only(bottom: 8),
-      elevation: 0,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12), side: BorderSide(color: Colors.grey.shade200)),
-      child: ListTile(
-        leading: Icon(icon, color: color),
-        title: Text(label),
-        trailing: Text(value, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
       ),
     );
   }
