@@ -26,6 +26,8 @@ class StudentModel {
   final String? assignedSeatNumber;
   @HiveField(10)
   final double monthlyFee;
+  @HiveField(11)
+  final DateTime? leaveDate;
 
   StudentModel({
     required this.id,
@@ -39,6 +41,7 @@ class StudentModel {
     this.assignedSeatId,
     this.assignedSeatNumber,
     this.monthlyFee = 2000.0,
+    this.leaveDate,
   });
 
   Map<String, dynamic> toMap() {
@@ -54,6 +57,7 @@ class StudentModel {
       'assignedSeatId': assignedSeatId,
       'assignedSeatNumber': assignedSeatNumber,
       'monthlyFee': monthlyFee,
+      'leaveDate': leaveDate?.toIso8601String(),
     };
   }
 
@@ -70,6 +74,7 @@ class StudentModel {
       assignedSeatId: map['assignedSeatId'],
       assignedSeatNumber: map['assignedSeatNumber'],
       monthlyFee: (map['monthlyFee'] as num?)?.toDouble() ?? 2000.0,
+      leaveDate: map['leaveDate'] != null ? DateTime.parse(map['leaveDate']) : null,
     );
   }
 
@@ -84,6 +89,7 @@ class StudentModel {
     String? assignedSeatId,
     String? assignedSeatNumber,
     double? monthlyFee,
+    DateTime? leaveDate,
   }) {
     return StudentModel(
       id: id,
@@ -97,6 +103,7 @@ class StudentModel {
       assignedSeatId: assignedSeatId ?? this.assignedSeatId,
       assignedSeatNumber: assignedSeatNumber ?? this.assignedSeatNumber,
       monthlyFee: monthlyFee ?? this.monthlyFee,
+      leaveDate: leaveDate ?? this.leaveDate,
     );
   }
 }
