@@ -242,6 +242,7 @@ class DashboardScreen extends ConsumerWidget {
     );
   }
 
+  
   Future<void> _checkAndPromptMonthlyFees(BuildContext context, WidgetRef ref) async {
     final fees = ref.read(feesStreamProvider).value ?? [];
     final currentMonthStr = DateFormat('MMMM yyyy').format(DateTime.now());
