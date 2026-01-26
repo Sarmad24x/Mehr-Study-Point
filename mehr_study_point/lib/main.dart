@@ -51,7 +51,7 @@ class MyApp extends ConsumerWidget {
           background: Colors.grey[50],
         ),
         scaffoldBackgroundColor: Colors.grey[50],
-        cardTheme: CardTheme(
+        cardTheme: CardThemeData(
           elevation: 0,
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
           color: Colors.white,
