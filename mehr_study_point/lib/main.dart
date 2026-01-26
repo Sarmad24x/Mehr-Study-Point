@@ -5,11 +5,15 @@ import 'services/hive_service.dart';
 import 'screens/auth/login_screen.dart';
 import 'providers/auth_provider.dart';
 import 'providers/service_providers.dart';
+import 'providers/theme_provider.dart';
 import 'widgets/main_navigation.dart';
+import 'package:hive_flutter/hive_flutter.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   
+  await Hive.initFlutter();
+
   try {
     // Initialize Firebase
     await Firebase.initializeApp();
@@ -18,7 +22,7 @@ Future<void> main() async {
     debugPrint("Firebase initialization failed: $e");
   }
 
-  // Initialize Hive
+  // Initialize Hive Service
   final hiveService = HiveService();
   await hiveService.init();
 
@@ -27,19 +31,38 @@ Future<void> main() async {
   ));
 }
 
-class MyApp extends StatelessWidget {
+class MyApp extends ConsumerWidget {
   const MyApp({super.key});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final themeMode = ref.watch(themeProvider);
+
     return MaterialApp(
       debugShowCheckedModeBanner: false,
       title: 'Mehr Study Point',
+      themeMode: themeMode,
       theme: ThemeData(
         useMaterial3: true,
+        brightness: Brightness.light,
         colorScheme: ColorScheme.fromSeed(
           seedColor: Colors.blue,
           primary: Colors.blue.shade800,
+          background: Colors.grey[50],
+        ),
+        scaffoldBackgroundColor: Colors.grey[50],
+        cardTheme: CardTheme(
+          elevation: 0,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          color: Colors.white,
+        ),
+      ),
+      darkTheme: ThemeData(
+        useMaterial3: true,
+        brightness: Brightness.dark,
+        colorScheme: ColorScheme.fromSeed(
+          seedColor: Colors.blue,
+          brightness: Brightness.dark,
         ),
       ),
       home: const AuthChecker(),
