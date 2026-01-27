@@ -106,19 +106,6 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                       subtitle: '₹50 per day overdue',
                       trailing: const Icon(Icons.edit, size: 20, color: Colors.grey),
                     ),
-                    _SettingsTile(
-                      icon: Icons.chair_alt_rounded,
-                      iconColor: Colors.blue.shade700,
-                      iconBgColor: Colors.blue.shade50,
-                      title: 'Seating Capacity',
-                      subtitle: '160 Total Seats',
-                      onTap: userProfile?.role == UserRole.admin 
-                        ? () async {
-                            await ref.read(seatServiceProvider).generateInitialSeats();
-                            if(mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Seats Initialized')));
-                          }
-                        : null,
-                    ),
                   ],
                 ),
 
