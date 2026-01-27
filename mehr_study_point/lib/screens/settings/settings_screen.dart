@@ -6,6 +6,7 @@ import '../../providers/service_providers.dart';
 import '../../providers/student_provider.dart';
 import '../../providers/fee_provider.dart';
 import '../../providers/theme_provider.dart';
+import '../../providers/settings_provider.dart';
 import '../../models/user_model.dart';
 import 'audit_logs_screen.dart';
 
@@ -25,6 +26,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     final themeMode = ref.watch(themeProvider);
     final students = ref.watch(studentsStreamProvider).value ?? [];
     final fees = ref.watch(feesStreamProvider).value ?? [];
+    final settings = ref.watch(settingsProvider);
 
     return Scaffold(
       backgroundColor: Theme.of(context).brightness == Brightness.light 
@@ -91,7 +93,10 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                       iconColor: Colors.blue.shade700,
                       iconBgColor: Colors.blue.shade50,
                       title: 'Operating Hours',
-                      subtitle: '08:00 AM - 10:00 PM',
+                      subtitle: '${settings['opening_time']} - ${settings['closing_time']}',
+                      onTap: userProfile?.role == UserRole.admin 
+                        ? () => _showOperatingHoursDialog(context, settings)
+                        : null,
                     ),
                     _SettingsTile(
                       icon: Icons.payments_outlined,
@@ -255,6 +260,46 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
         ),
       ],
     );
+  }
+
+  void _showOperatingHoursDialog(BuildContext context, Map<String, dynamic> settings) async {
+    TimeOfDay parseTime(String timeStr) {
+      final parts = timeStr.split(' ');
+      final timeParts = parts[0].split(':');
+      int hour = int.parse(timeParts[0]);
+      int minute = int.parse(timeParts[1]);
+      if (parts[1] == 'PM' && hour != 12) hour += 12;
+      if (parts[1] == 'AM' && hour == 12) hour = 0;
+      return TimeOfDay(hour: hour, minute: minute);
+    }
+
+    String formatTime(TimeOfDay time) {
+      final hour = time.hourOfPeriod == 0 ? 12 : time.hourOfPeriod;
+      final period = time.period == DayPeriod.am ? 'AM' : 'PM';
+      return '${hour.toString().padLeft(2, '0')}:${time.minute.toString().padLeft(2, '0')} $period';
+    }
+
+    final openingTime = await showTimePicker(
+      context: context,
+      initialTime: parseTime(settings['opening_time']),
+      helpText: 'Select Opening Time',
+    );
+
+    if (openingTime != null) {
+      if (!mounted) return;
+      final closingTime = await showTimePicker(
+        context: context,
+        initialTime: parseTime(settings['closing_time']),
+        helpText: 'Select Closing Time',
+      );
+
+      if (closingTime != null) {
+        await ref.read(settingsProvider.notifier).updateOperatingHours(
+          formatTime(openingTime),
+          formatTime(closingTime),
+        );
+      }
+    }
   }
 
   void _showAccountSecurityDialog(BuildContext context, UserModel? user) {
