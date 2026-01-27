@@ -60,6 +60,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                       iconColor: Colors.blue.shade700,
                       iconBgColor: Colors.blue.shade50,
                       title: 'Account Security',
+                      onTap: () => _showAccountSecurityDialog(context, userProfile),
                     ),
                     _SettingsTile(
                       icon: themeMode == ThemeMode.dark ? Icons.dark_mode : Icons.light_mode,
@@ -253,6 +254,108 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
           style: TextStyle(color: Colors.grey.shade400, fontSize: 13),
         ),
       ],
+    );
+  }
+
+  void _showAccountSecurityDialog(BuildContext context, UserModel? user) {
+    final emailController = TextEditingController(text: user?.email);
+    final passwordController = TextEditingController();
+    final authUser = ref.read(authServiceProvider).currentUser;
+    final isVerified = authUser?.emailVerified ?? false;
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
+      builder: (context) => Padding(
+        padding: EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom, left: 20, right: 20, top: 20),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text('Account Security', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+            const SizedBox(height: 20),
+            
+            // Email Section
+            const Text('Email Address', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
+            const SizedBox(height: 8),
+            TextFormField(
+              controller: emailController,
+              decoration: InputDecoration(
+                border: const OutlineInputBorder(),
+                suffixIcon: isVerified 
+                  ? const Icon(Icons.verified, color: Colors.green) 
+                  : TextButton(
+                      onPressed: () async {
+                        await ref.read(authServiceProvider).sendEmailVerification();
+                        if(mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Verification email sent!')));
+                      }, 
+                      child: const Text('Verify')
+                    ),
+              ),
+            ),
+            const SizedBox(height: 16),
+
+            // Password Section
+            const Text('Update Password', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
+            const SizedBox(height: 8),
+            TextFormField(
+              controller: passwordController,
+              obscureText: true,
+              decoration: const InputDecoration(
+                hintText: 'Enter new password',
+                border: OutlineInputBorder(),
+              ),
+            ),
+            const SizedBox(height: 24),
+
+            // Actions
+            Row(
+              children: [
+                Expanded(
+                  child: OutlinedButton(
+                    onPressed: () async {
+                      try {
+                        await ref.read(authServiceProvider).sendPasswordResetEmail(user!.email);
+                        if(mounted) {
+                          Navigator.pop(context);
+                          ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Reset link sent to email!')));
+                        }
+                      } catch (e) {
+                         if(mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error: $e')));
+                      }
+                    },
+                    child: const Text('Forgot Password?'),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: ElevatedButton(
+                    onPressed: () async {
+                      try {
+                        if (emailController.text != user?.email) {
+                          await ref.read(authServiceProvider).updateEmail(emailController.text.trim());
+                        }
+                        if (passwordController.text.isNotEmpty) {
+                          await ref.read(authServiceProvider).changePassword(passwordController.text.trim());
+                        }
+                        if(mounted) {
+                          Navigator.pop(context);
+                          ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Account updated successfully!')));
+                        }
+                      } catch (e) {
+                        if(mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error: $e')));
+                      }
+                    },
+                    child: const Text('Save Changes'),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 30),
+          ],
+        ),
+      ),
     );
   }
 

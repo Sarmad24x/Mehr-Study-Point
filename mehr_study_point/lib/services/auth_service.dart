@@ -9,6 +9,9 @@ class AuthService {
   // Stream of auth state changes
   Stream<User?> get authStateChanges => _auth.authStateChanges();
 
+  // Get current Firebase user
+  User? get currentUser => _auth.currentUser;
+
   // Sign in
   Future<UserCredential> signIn(String email, String password) async {
     try {
@@ -24,6 +27,55 @@ class AuthService {
   // Sign out
   Future<void> signOut() async {
     await _auth.signOut();
+  }
+
+  // Change Password
+  Future<void> changePassword(String newPassword) async {
+    try {
+      final user = _auth.currentUser;
+      if (user != null) {
+        await user.updatePassword(newPassword);
+      } else {
+        throw Exception("No user logged in");
+      }
+    } catch (e) {
+      rethrow;
+    }
+  }
+
+  // Update Email
+  Future<void> updateEmail(String newEmail) async {
+    try {
+      final user = _auth.currentUser;
+      if (user != null) {
+        await user.updateEmail(newEmail);
+        // Also update in Firestore
+        await _firestore.collection('users').doc(user.uid).update({'email': newEmail});
+      }
+    } catch (e) {
+      rethrow;
+    }
+  }
+
+  // Send Email Verification
+  Future<void> sendEmailVerification() async {
+    try {
+      final user = _auth.currentUser;
+      if (user != null) {
+        await user.sendEmailVerification();
+      }
+    } catch (e) {
+      rethrow;
+    }
+  }
+
+  // Send Password Reset Email
+  Future<void> sendPasswordResetEmail(String email) async {
+    try {
+      await _auth.sendPasswordResetEmail(email: email);
+    } catch (e) {
+      rethrow;
+    }
   }
 
   // Get User Data from Firestore
