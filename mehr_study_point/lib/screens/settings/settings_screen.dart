@@ -103,8 +103,11 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                       iconColor: Colors.blue.shade700,
                       iconBgColor: Colors.blue.shade50,
                       title: 'Fine Rates',
-                      subtitle: '₹50 per day overdue',
+                      subtitle: 'Rs ${settings['fine_rate']} per day overdue',
                       trailing: const Icon(Icons.edit, size: 20, color: Colors.grey),
+                      onTap: userProfile?.role == UserRole.admin 
+                        ? () => _showFineRateDialog(context, settings['fine_rate'])
+                        : null,
                     ),
                   ],
                 ),
@@ -246,6 +249,45 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
           style: TextStyle(color: Colors.grey.shade400, fontSize: 13),
         ),
       ],
+    );
+  }
+
+  void _showFineRateDialog(BuildContext context, int currentRate) {
+    final controller = TextEditingController(text: currentRate.toString());
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Edit Fine Rate'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text('Enter daily overdue fine in PKR (Rs):', style: TextStyle(fontSize: 14)),
+            const SizedBox(height: 12),
+            TextField(
+              controller: controller,
+              keyboardType: TextInputType.number,
+              decoration: const InputDecoration(
+                prefixText: 'Rs ',
+                border: OutlineInputBorder(),
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancel')),
+          ElevatedButton(
+            onPressed: () {
+              final newRate = int.tryParse(controller.text);
+              if (newRate != null) {
+                ref.read(settingsProvider.notifier).updateFineRate(newRate);
+                Navigator.pop(context);
+              }
+            },
+            child: const Text('Update'),
+          ),
+        ],
+      ),
     );
   }
 

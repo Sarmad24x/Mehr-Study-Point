@@ -11,6 +11,7 @@ class SettingsNotifier extends StateNotifier<Map<String, dynamic>> {
   SettingsNotifier(this._ref) : super({
     'opening_time': '08:00 AM',
     'closing_time': '10:00 PM',
+    'fine_rate': 50,
   }) {
     _loadSettings();
   }
@@ -21,9 +22,11 @@ class SettingsNotifier extends StateNotifier<Map<String, dynamic>> {
     final box = _ref.read(hiveServiceProvider).getBox(_boxName);
     final opening = box.get('opening_time', defaultValue: '08:00 AM');
     final closing = box.get('closing_time', defaultValue: '10:00 PM');
+    final fineRate = box.get('fine_rate', defaultValue: 50);
     state = {
       'opening_time': opening,
       'closing_time': closing,
+      'fine_rate': fineRate,
     };
   }
 
@@ -35,6 +38,15 @@ class SettingsNotifier extends StateNotifier<Map<String, dynamic>> {
       ...state,
       'opening_time': opening,
       'closing_time': closing,
+    };
+  }
+
+  Future<void> updateFineRate(int rate) async {
+    final box = _ref.read(hiveServiceProvider).getBox(_boxName);
+    await box.put('fine_rate', rate);
+    state = {
+      ...state,
+      'fine_rate': rate,
     };
   }
 }
