@@ -30,7 +30,6 @@ Future<void> main() async {
     child: MyApp(),
   ));
 }
-
 class MyApp extends ConsumerWidget {
   const MyApp({super.key});
 
@@ -128,6 +127,7 @@ class ProfileLoader extends ConsumerWidget {
       ),
       error: (e, _) => Scaffold(
         body: Center(child: Text('Profile Loading Error: $e')),
+        
       ),
     );
   }
