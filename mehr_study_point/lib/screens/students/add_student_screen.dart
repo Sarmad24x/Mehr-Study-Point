@@ -145,101 +145,197 @@ class _AddStudentScreenState extends ConsumerState<AddStudentScreen> {
     final availableSeats = seatsAsync.value?.where((s) => s.status == SeatStatus.available).toList() ?? [];
 
     return Scaffold(
-      appBar: AppBar(title: Text(isEditing ? 'Edit Student' : 'Enroll New Student')),
+      backgroundColor: Theme.of(context).brightness == Brightness.light ? Colors.grey[50] : null,
+      appBar: AppBar(
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back_ios_new, size: 20),
+          onPressed: () => Navigator.of(context).pop(),
+        ),
+        title: Text(isEditing ? 'Edit Student' : 'Enroll New Student', 
+          style: const TextStyle(fontWeight: FontWeight.bold)),
+        centerTitle: true,
+        elevation: 0,
+        backgroundColor: Colors.transparent,
+      ),
       body: _isLoading 
         ? const Center(child: CircularProgressIndicator())
         : SingleChildScrollView(
-            padding: const EdgeInsets.all(16),
+            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
             child: Form(
               key: _formKey,
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  TextFormField(
-                    controller: _nameController,
-                    decoration: const InputDecoration(labelText: 'Full Name*', border: OutlineInputBorder()),
-                    validator: (value) => value?.isEmpty ?? true ? 'Required' : null,
-                  ),
-                  const SizedBox(height: 16),
-                  TextFormField(
-                    controller: _contactController,
-                    decoration: const InputDecoration(labelText: 'Contact Number*', border: OutlineInputBorder()),
-                    keyboardType: TextInputType.phone,
-                    validator: (value) => value?.isEmpty ?? true ? 'Required' : null,
-                  ),
-                  const SizedBox(height: 16),
-                  TextFormField(
-                    controller: _monthlyFeeController,
-                    decoration: const InputDecoration(labelText: 'Monthly Fee Rate*', border: OutlineInputBorder(), prefixText: 'Rs. '),
-                    keyboardType: TextInputType.number,
-                    validator: (value) => value?.isEmpty ?? true ? 'Required' : null,
-                  ),
-                  const SizedBox(height: 16),
-                  TextFormField(
-                    controller: _guardianNameController,
-                    decoration: const InputDecoration(labelText: 'Guardian Name', border: OutlineInputBorder()),
-                  ),
-                  const SizedBox(height: 16),
-                  TextFormField(
-                    controller: _guardianContactController,
-                    decoration: const InputDecoration(labelText: 'Guardian Contact', border: OutlineInputBorder()),
-                    keyboardType: TextInputType.phone,
-                  ),
-                  const SizedBox(height: 16),
-                  TextFormField(
-                    controller: _addressController,
-                    decoration: const InputDecoration(labelText: 'Address*', border: OutlineInputBorder()),
-                    maxLines: 2,
-                    validator: (value) => value?.isEmpty ?? true ? 'Required' : null,
-                  ),
-                  if (!isEditing) ...[
-                    const SizedBox(height: 16),
-                    TextFormField(
-                      controller: _admissionFeeController,
-                      decoration: const InputDecoration(labelText: 'Admission Fee (One-time)', border: OutlineInputBorder(), prefixText: 'Rs. '),
+                  _buildSectionTitle('PERSONAL DETAILS'),
+                  _buildCard([
+                    _buildTextField(
+                      controller: _nameController,
+                      label: 'Full Name',
+                      icon: Icons.person_outline,
+                      validator: (v) => v?.isEmpty ?? true ? 'Required' : null,
+                    ),
+                    _buildTextField(
+                      controller: _contactController,
+                      label: 'Contact Number',
+                      icon: Icons.phone_android_outlined,
+                      keyboardType: TextInputType.phone,
+                      validator: (v) => v?.isEmpty ?? true ? 'Required' : null,
+                    ),
+                    _buildTextField(
+                      controller: _addressController,
+                      label: 'Address',
+                      icon: Icons.location_on_outlined,
+                      maxLines: 2,
+                      validator: (v) => v?.isEmpty ?? true ? 'Required' : null,
+                    ),
+                  ]),
+
+                  const SizedBox(height: 24),
+                  _buildSectionTitle('FEE CONFIGURATION'),
+                  _buildCard([
+                    _buildTextField(
+                      controller: _monthlyFeeController,
+                      label: 'Monthly Fee Rate',
+                      icon: Icons.payments_outlined,
+                      prefixText: 'Rs. ',
                       keyboardType: TextInputType.number,
+                      validator: (v) => v?.isEmpty ?? true ? 'Required' : null,
                     ),
-                    const SizedBox(height: 24),
-                    const Text('Assign Seat*', style: TextStyle(fontWeight: FontWeight.bold)),
-                    const SizedBox(height: 8),
-                    DropdownButtonFormField<SeatModel>(
-                      decoration: const InputDecoration(border: OutlineInputBorder()),
-                      hint: const Text('Select an available seat'),
-                      value: _selectedSeat,
-                      items: availableSeats.map((seat) {
-                        return DropdownMenuItem(
-                          value: seat,
-                          child: Text('Seat ${seat.seatNumber}'),
-                        );
-                      }).toList(),
-                      onChanged: (value) => setState(() => _selectedSeat = value),
-                      validator: (value) => value == null ? 'Required' : null,
+                    if (!isEditing)
+                      _buildTextField(
+                        controller: _admissionFeeController,
+                        label: 'Admission Fee (One-time)',
+                        icon: Icons.receipt_long_outlined,
+                        prefixText: 'Rs. ',
+                        keyboardType: TextInputType.number,
+                      ),
+                  ]),
+
+                  const SizedBox(height: 24),
+                  _buildSectionTitle('GUARDIAN INFORMATION'),
+                  _buildCard([
+                    _buildTextField(
+                      controller: _guardianNameController,
+                      label: 'Guardian Name',
+                      icon: Icons.people_outline,
                     ),
-                  ] else ...[
-                    const SizedBox(height: 24),
-                    Card(
-                      color: Colors.blue.shade50,
-                      child: ListTile(
-                        leading: const Icon(Icons.event_seat, color: Colors.blue),
-                        title: const Text('Current Seat'),
+                    _buildTextField(
+                      controller: _guardianContactController,
+                      label: 'Guardian Contact',
+                      icon: Icons.phone_android_outlined,
+                      keyboardType: TextInputType.phone,
+                    ),
+                  ]),
+
+                  const SizedBox(height: 24),
+                  _buildSectionTitle('SEAT ASSIGNMENT'),
+                  if (!isEditing)
+                    _buildCard([
+                      Padding(
+                        padding: const EdgeInsets.all(16.0),
+                        child: DropdownButtonFormField<SeatModel>(
+                          decoration: InputDecoration(
+                            labelText: 'Select an available seat',
+                            prefixIcon: const Icon(Icons.event_seat_outlined, color: Colors.blue),
+                            border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                            enabledBorder: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(12),
+                              borderSide: BorderSide(color: Colors.grey.shade300),
+                            ),
+                          ),
+                          value: _selectedSeat,
+                          items: availableSeats.map((seat) {
+                            return DropdownMenuItem(
+                              value: seat,
+                              child: Text('Seat ${seat.seatNumber}'),
+                            );
+                          }).toList(),
+                          onChanged: (value) => setState(() => _selectedSeat = value),
+                          validator: (value) => value == null ? 'Required' : null,
+                        ),
+                      ),
+                    ])
+                  else
+                    _buildCard([
+                      ListTile(
+                        leading: Container(
+                          padding: const EdgeInsets.all(8),
+                          decoration: BoxDecoration(color: Colors.blue.shade50, borderRadius: BorderRadius.circular(8)),
+                          child: const Icon(Icons.event_seat, color: Colors.blue),
+                        ),
+                        title: const Text('Currently Occupying', style: TextStyle(fontWeight: FontWeight.w600)),
                         subtitle: Text('Seat Number: ${widget.student?.assignedSeatNumber ?? 'None'}'),
                       ),
+                    ]),
+
+                  const SizedBox(height: 40),
+                  SizedBox(
+                    height: 56,
+                    child: ElevatedButton(
+                      onPressed: _saveStudent,
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.blue.shade700,
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                        elevation: 0,
+                      ),
+                      child: Text(
+                        isEditing ? 'UPDATE STUDENT DETAILS' : 'ENROLL NEW STUDENT',
+                        style: const TextStyle(fontWeight: FontWeight.bold, letterSpacing: 1.1, color: Colors.white),
+                      ),
                     ),
-                  ],
-                  const SizedBox(height: 32),
-                  ElevatedButton(
-                    onPressed: _saveStudent,
-                    style: ElevatedButton.styleFrom(
-                      padding: const EdgeInsets.symmetric(vertical: 16),
-                      backgroundColor: Colors.blue.shade800,
-                      foregroundColor: Colors.white,
-                    ),
-                    child: Text(isEditing ? 'Update Details' : 'Enroll Student'),
                   ),
+                  const SizedBox(height: 40),
                 ],
               ),
             ),
           ),
+    );
+  }
+
+  Widget _buildSectionTitle(String title) {
+    return Padding(
+      padding: const EdgeInsets.only(left: 4, bottom: 8),
+      child: Text(
+        title,
+        style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.grey.shade600, letterSpacing: 1.1),
+      ),
+    );
+  }
+
+  Widget _buildCard(List<Widget> children) {
+    return Card(
+      elevation: 0,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      child: Column(children: children),
+    );
+  }
+
+  Widget _buildTextField({
+    required TextEditingController controller,
+    required String label,
+    required IconData icon,
+    TextInputType? keyboardType,
+    String? prefixText,
+    int maxLines = 1,
+    String? Function(String?)? validator,
+  }) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      child: TextFormField(
+        controller: controller,
+        keyboardType: keyboardType,
+        maxLines: maxLines,
+        validator: validator,
+        decoration: InputDecoration(
+          labelText: label,
+          prefixIcon: Icon(icon, color: Colors.blueGrey.shade400, size: 22),
+          prefixText: prefixText,
+          border: UnderlineInputBorder(borderSide: BorderSide(color: Colors.grey.shade200)),
+          enabledBorder: UnderlineInputBorder(borderSide: BorderSide(color: Colors.grey.shade200)),
+          focusedBorder: UnderlineInputBorder(borderSide: BorderSide(color: Colors.blue.shade700)),
+          contentPadding: const EdgeInsets.symmetric(vertical: 16),
+        ),
+      ),
     );
   }
 }
