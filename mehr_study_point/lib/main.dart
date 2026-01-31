@@ -7,6 +7,7 @@ import 'providers/auth_provider.dart';
 import 'providers/service_providers.dart';
 import 'providers/theme_provider.dart';
 import 'widgets/main_navigation.dart';
+import 'screens/splash_screen.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 
 Future<void> main() async {
@@ -30,12 +31,16 @@ Future<void> main() async {
     child: MyApp(),
   ));
 }
+
+final showSplashProvider = StateProvider<bool>((ref) => true);
+
 class MyApp extends ConsumerWidget {
   const MyApp({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final themeMode = ref.watch(themeProvider);
+    final showSplash = ref.watch(showSplashProvider);
 
     return MaterialApp(
       debugShowCheckedModeBanner: false,
@@ -64,7 +69,9 @@ class MyApp extends ConsumerWidget {
           brightness: Brightness.dark,
         ),
       ),
-      home: const AuthChecker(),
+      home: showSplash 
+          ? SplashScreen(onPressed: () => ref.read(showSplashProvider.notifier).state = false)
+          : const AuthChecker(),
     );
   }
 }
@@ -127,7 +134,6 @@ class ProfileLoader extends ConsumerWidget {
       ),
       error: (e, _) => Scaffold(
         body: Center(child: Text('Profile Loading Error: $e')),
-        
       ),
     );
   }
