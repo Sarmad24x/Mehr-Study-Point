@@ -50,57 +50,85 @@ class MyApp extends ConsumerWidget {
       theme: ThemeData(
         useMaterial3: true,
         brightness: Brightness.light,
-        textTheme: GoogleFonts.poppinsTextTheme(), // Use default Poppins theme
+        textTheme: GoogleFonts.poppinsTextTheme(),
         colorScheme: ColorScheme.fromSeed(
-          seedColor: const Color(0xFF2D62ED),
-          primary: const Color(0xFF2D62ED),
+          seedColor: const Color(0xFF3F51B5), // Premium Indigo
+          primary: const Color(0xFF3F51B5),
+          onPrimary: Colors.white,
+          secondary: const Color(0xFF00BFA5), // Teal accent for success/actions
           surface: Colors.white,
-          background: const Color(0xFFF8F9FB),
+          background: const Color(0xFFF4F7FA), // Soft grayish-blue background
+          error: const Color(0xFFE53935),
         ),
-        scaffoldBackgroundColor: const Color(0xFFF8F9FB),
-        appBarTheme: const AppBarTheme(
-          backgroundColor: Colors.transparent,
+        scaffoldBackgroundColor: const Color(0xFFF4F7FA),
+
+        // Refined AppBar
+        appBarTheme: AppBarTheme(
+          backgroundColor: const Color(0xFFF4F7FA),
           elevation: 0,
-          centerTitle: true,
-          titleTextStyle: TextStyle(
-            color: Color(0xFF1A1C1E),
+          centerTitle: false, // Modern look usually prefers left-aligned or clean center
+          surfaceTintColor: Colors.transparent,
+          titleTextStyle: GoogleFonts.poppins(
+            color: const Color(0xFF1A1C1E),
             fontSize: 20,
-            fontWeight: FontWeight.bold,
+            fontWeight: FontWeight.w600,
           ),
-          iconTheme: IconThemeData(color: Color(0xFF1A1C1E)),
+          iconTheme: const IconThemeData(color: Color(0xFF1A1C1E)),
         ),
+
+        // Modern Card Design
         cardTheme: CardThemeData(
           elevation: 0,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+            side: BorderSide(color: Colors.grey.withOpacity(0.1)),
+          ),
           color: Colors.white,
         ),
+
+        // Clean Navigation Bar
         navigationBarTheme: NavigationBarThemeData(
           backgroundColor: Colors.white,
-          indicatorColor: Colors.transparent,
+          indicatorColor: const Color(0xFF3F51B5).withOpacity(0.1),
+          height: 70,
           labelTextStyle: MaterialStateProperty.resolveWith((states) {
             if (states.contains(MaterialState.selected)) {
-              return const TextStyle(color: Color(0xFF2D62ED), fontWeight: FontWeight.bold, fontSize: 12);
+              return const TextStyle(color: Color(0xFF3F51B5), fontWeight: FontWeight.w600, fontSize: 12);
             }
             return const TextStyle(color: Colors.grey, fontSize: 12);
           }),
           iconTheme: MaterialStateProperty.resolveWith((states) {
             if (states.contains(MaterialState.selected)) {
-              return const IconThemeData(color: Color(0xFF2D62ED), size: 28);
+              return const IconThemeData(color: Color(0xFF3F51B5), size: 26);
             }
-            return const IconThemeData(color: Colors.grey, size: 28);
+            return const IconThemeData(color: Colors.grey, size: 24);
           }),
         ),
+
+        // Better Buttons
+        elevatedButtonTheme: ElevatedButtonThemeData(
+          style: ElevatedButton.styleFrom(
+            backgroundColor: const Color(0xFF3F51B5),
+            foregroundColor: Colors.white,
+            minimumSize: const Size(double.infinity, 50),
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            elevation: 0,
+          ),
+        ),
       ),
+
       darkTheme: ThemeData(
         useMaterial3: true,
         brightness: Brightness.dark,
-        textTheme: GoogleFonts.poppinsTextTheme(
-          ThemeData(brightness: Brightness.dark).textTheme,
-        ),
+        textTheme: GoogleFonts.poppinsTextTheme(ThemeData.dark().textTheme),
         colorScheme: ColorScheme.fromSeed(
-          seedColor: const Color(0xFF2D62ED),
+          seedColor: const Color(0xFF9FA8DA),
           brightness: Brightness.dark,
+          primary: const Color(0xFF9FA8DA),
+          surface: const Color(0xFF121212),
+          background: const Color(0xFF0A0A0A),
         ),
+        scaffoldBackgroundColor: const Color(0xFF0A0A0A),
       ),
       home: showSplash
           ? SplashScreen(onPressed: () => ref.read(showSplashProvider.notifier).state = false)
