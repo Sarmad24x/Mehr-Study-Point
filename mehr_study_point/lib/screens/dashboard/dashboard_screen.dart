@@ -18,6 +18,9 @@ class DashboardScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+
     final userProfile = ref.watch(userProfileProvider).value;
     final stats = ref.watch(dashboardStatsProvider);
     final students = ref.watch(studentsStreamProvider).value ?? [];
@@ -52,17 +55,15 @@ class DashboardScreen extends ConsumerWidget {
                       children: [
                         Text(
                           'Welcome back, ${userProfile?.name.split(' ').first ?? 'Admin'}',
-                          style: const TextStyle(
-                            fontSize: 24,
+                          style: theme.textTheme.headlineSmall?.copyWith(
                             fontWeight: FontWeight.bold,
-                            color: Color(0xFF1A1C1E),
+                            color: colorScheme.onBackground,
                           ),
                         ),
                         Text(
                           DateFormat('EEEE, dd MMMM').format(DateTime.now()),
-                          style: TextStyle(
-                            fontSize: 14,
-                            color: Colors.grey.shade600,
+                          style: theme.textTheme.bodyMedium?.copyWith(
+                            color: colorScheme.onBackground.withOpacity(0.6),
                           ),
                         ),
                       ],
@@ -73,15 +74,15 @@ class DashboardScreen extends ConsumerWidget {
                     backgroundImage: userProfile?.photoUrl != null
                         ? NetworkImage(userProfile!.photoUrl!)
                         : null,
-                    backgroundColor: Colors.grey.shade200,
+                    backgroundColor: colorScheme.surfaceVariant,
                     child: userProfile?.photoUrl == null
-                        ? const Icon(Icons.person, color: Colors.grey)
+                        ? Icon(Icons.person, color: colorScheme.onSurfaceVariant)
                         : null,
                   ),
                 ],
               ),
               const SizedBox(height: 30),
-              
+
               // Stat Cards
               Row(
                 children: [
@@ -91,8 +92,7 @@ class DashboardScreen extends ConsumerWidget {
                       'Active Students',
                       stats.activeStudents.toString(),
                       Icons.people_alt_rounded,
-                      const Color(0xFF4CAF50),
-                      const Color(0xFFE8F5E9),
+                      const Color(0xFF4CAF50), // Keep success green
                     ),
                   ),
                   const SizedBox(width: 15),
@@ -102,8 +102,7 @@ class DashboardScreen extends ConsumerWidget {
                       'Pending Fees',
                       'Rs. ${stats.pendingFees.toInt()}',
                       Icons.account_balance_wallet_rounded,
-                      const Color(0xFFEF6C00),
-                      const Color(0xFFFFF3E0),
+                      const Color(0xFFEF6C00), // Keep warning orange
                     ),
                   ),
                 ],
@@ -115,13 +114,9 @@ class DashboardScreen extends ConsumerWidget {
               const SizedBox(height: 30),
 
               // Quick Actions
-              const Text(
+              Text(
                 'Quick Actions',
-                style: TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
-                  color: Color(0xFF1A1C1E),
-                ),
+                style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
               ),
               const SizedBox(height: 16),
               Row(
@@ -131,7 +126,7 @@ class DashboardScreen extends ConsumerWidget {
                     context,
                     'Add Student',
                     Icons.person_add_alt_1_rounded,
-                    const Color(0xFF2D62ED),
+                    colorScheme.primary,
                     true,
                     onTap: () => Navigator.push(context, MaterialPageRoute(builder: (context) => const AddStudentScreen())),
                   ),
@@ -139,15 +134,15 @@ class DashboardScreen extends ConsumerWidget {
                     context,
                     'Assign Seat',
                     Icons.event_seat_rounded,
-                    Colors.blue.shade700,
+                    colorScheme.secondary,
                     false,
-                    onTap: () {}, // Navigate to seat assignment or similar
+                    onTap: () {},
                   ),
                   _buildQuickAction(
                     context,
                     'Collect Fee',
                     Icons.payments_rounded,
-                    Colors.blue.shade700,
+                    colorScheme.secondary,
                     false,
                     onTap: () => Navigator.push(context, MaterialPageRoute(builder: (context) => const FeeManagementScreen())),
                   ),
@@ -155,7 +150,7 @@ class DashboardScreen extends ConsumerWidget {
                     context,
                     'Reports',
                     Icons.bar_chart_rounded,
-                    Colors.blue.shade700,
+                    colorScheme.secondary,
                     false,
                     onTap: () {},
                   ),
@@ -167,17 +162,13 @@ class DashboardScreen extends ConsumerWidget {
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  const Text(
+                  Text(
                     'Recent Enrollments',
-                    style: TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
-                      color: Color(0xFF1A1C1E),
-                    ),
+                    style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
                   ),
                   TextButton(
-                    onPressed: () {}, // Navigate to all students
-                    child: const Text('View All', style: TextStyle(color: Color(0xFF2D62ED))),
+                    onPressed: () {},
+                    child: Text('View All', style: TextStyle(color: colorScheme.primary)),
                   ),
                 ],
               ),
@@ -192,12 +183,16 @@ class DashboardScreen extends ConsumerWidget {
     );
   }
 
-  Widget _buildStatCard(BuildContext context, String title, String value, IconData icon, Color color, Color bgColor) {
+  Widget _buildStatCard(BuildContext context, String title, String value, IconData icon, Color accentColor) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: bgColor,
+        color: isDark ? Theme.of(context).colorScheme.surface : accentColor.withOpacity(0.12),
         borderRadius: BorderRadius.circular(24),
+        // FIXED: Use Border.all instead of BorderSide
+        border: isDark ? Border.all(color: accentColor.withOpacity(0.3)) : null,
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -205,25 +200,26 @@ class DashboardScreen extends ConsumerWidget {
           Container(
             padding: const EdgeInsets.all(8),
             decoration: BoxDecoration(
-              color: Colors.white,
+              color: isDark ? Colors.black26 : Colors.white,
               borderRadius: BorderRadius.circular(12),
             ),
-            child: Icon(icon, color: color, size: 24),
+            child: Icon(icon, color: accentColor, size: 24),
           ),
           const SizedBox(height: 20),
           Text(
             value,
             style: TextStyle(
-              fontSize: 28,
+              fontSize: 24,
               fontWeight: FontWeight.bold,
-              color: color,
+              // FIXED: Replaced .darker() with a standard HSL manipulation
+              color: isDark ? Colors.white : HSLColor.fromColor(accentColor).withLightness(0.3).toColor(),
             ),
           ),
           Text(
             title,
             style: TextStyle(
-              fontSize: 14,
-              color: color.withAlpha((255 * 0.8).round()),
+              fontSize: 13,
+              color: isDark ? Colors.white70 : accentColor.withOpacity(0.8),
               fontWeight: FontWeight.w500,
             ),
           ),
@@ -233,25 +229,25 @@ class DashboardScreen extends ConsumerWidget {
   }
 
   Widget _buildOccupancyCard(BuildContext context, DashboardStats stats) {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
     final occupied = stats.totalSeats - stats.availableSeats;
-    
+
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(24),
       decoration: BoxDecoration(
-        color: const Color(0xFFF0F7FF),
+        color: isDark ? theme.colorScheme.surface : const Color(0xFFF0F7FF),
         borderRadius: BorderRadius.circular(24),
+        // FIXED: Use Border.all
+        border: isDark ? Border.all(color: theme.colorScheme.outline.withOpacity(0.2)) : null,
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
+          Text(
             'Seat Occupancy',
-            style: TextStyle(
-              fontSize: 18,
-              fontWeight: FontWeight.bold,
-              color: Color(0xFF1A1C1E),
-            ),
+            style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
           ),
           const SizedBox(height: 20),
           SizedBox(
@@ -260,20 +256,19 @@ class DashboardScreen extends ConsumerWidget {
               children: [
                 PieChart(
                   PieChartData(
-                    sectionsSpace: 0,
-                    centerSpaceRadius: 65,
-                    startDegreeOffset: -90,
+                    sectionsSpace: 4,
+                    centerSpaceRadius: 60,
                     sections: [
                       PieChartSectionData(
                         value: stats.availableSeats.toDouble(),
                         color: const Color(0xFF4CAF50),
-                        radius: 20,
+                        radius: 18,
                         showTitle: false,
                       ),
                       PieChartSectionData(
                         value: occupied.toDouble(),
-                        color: const Color(0xFFF44336),
-                        radius: 20,
+                        color: theme.colorScheme.error,
+                        radius: 18,
                         showTitle: false,
                       ),
                     ],
@@ -285,18 +280,14 @@ class DashboardScreen extends ConsumerWidget {
                     children: [
                       Text(
                         '${stats.availableSeats}',
-                        style: const TextStyle(
-                          fontSize: 28,
+                        style: theme.textTheme.headlineMedium?.copyWith(
                           fontWeight: FontWeight.bold,
-                          color: Colors.white, // In image it seems white or very light
+                          color: theme.colorScheme.onSurface,
                         ),
                       ),
                       Text(
-                        '/${stats.totalSeats}',
-                        style: TextStyle(
-                          fontSize: 14,
-                          color: Colors.white.withAlpha((255 * 0.8).round()),
-                        ),
+                        'Available',
+                        style: theme.textTheme.bodySmall,
                       ),
                     ],
                   ),
@@ -308,9 +299,9 @@ class DashboardScreen extends ConsumerWidget {
           Row(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              _buildLegendItem('Available (${stats.availableSeats})', const Color(0xFF4CAF50)),
+              _buildLegendItem(context, 'Available', const Color(0xFF4CAF50)),
               const SizedBox(width: 24),
-              _buildLegendItem('Occupied ($occupied)', const Color(0xFFF44336)),
+              _buildLegendItem(context, 'Occupied', theme.colorScheme.error),
             ],
           ),
         ],
@@ -318,31 +309,26 @@ class DashboardScreen extends ConsumerWidget {
     );
   }
 
-  Widget _buildLegendItem(String label, Color color) {
+  Widget _buildLegendItem(BuildContext context, String label, Color color) {
     return Row(
       children: [
         Container(
-          width: 12,
-          height: 12,
-          decoration: BoxDecoration(
-            color: color,
-            shape: BoxShape.circle,
-          ),
+          width: 10,
+          height: 10,
+          decoration: BoxDecoration(color: color, shape: BoxShape.circle),
         ),
         const SizedBox(width: 8),
         Text(
           label,
-          style: TextStyle(
-            fontSize: 12,
-            color: Colors.grey.shade700,
-            fontWeight: FontWeight.w500,
-          ),
+          style: Theme.of(context).textTheme.bodySmall,
         ),
       ],
     );
   }
 
   Widget _buildQuickAction(BuildContext context, String label, IconData icon, Color color, bool isPrimary, {VoidCallback? onTap}) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
     return GestureDetector(
       onTap: onTap,
       child: Column(
@@ -351,12 +337,12 @@ class DashboardScreen extends ConsumerWidget {
             width: 65,
             height: 65,
             decoration: BoxDecoration(
-              color: isPrimary ? color : Colors.white,
-              borderRadius: BorderRadius.circular(16),
+              color: isPrimary ? color : (isDark ? Colors.grey[850] : Colors.white),
+              borderRadius: BorderRadius.circular(20),
               boxShadow: [
-                if (!isPrimary)
+                if (!isPrimary && !isDark)
                   BoxShadow(
-                    color: Colors.black.withAlpha((255 * 0.05).round()),
+                    color: Colors.black.withOpacity(0.05),
                     blurRadius: 10,
                     offset: const Offset(0, 4),
                   ),
@@ -365,16 +351,15 @@ class DashboardScreen extends ConsumerWidget {
             child: Icon(
               icon,
               color: isPrimary ? Colors.white : color,
-              size: 28,
+              size: 26,
             ),
           ),
           const SizedBox(height: 8),
           Text(
             label,
-            style: const TextStyle(
+            style: Theme.of(context).textTheme.labelSmall?.copyWith(
+              fontWeight: FontWeight.w600,
               fontSize: 11,
-              fontWeight: FontWeight.w500,
-              color: Color(0xFF1A1C1E),
             ),
           ),
         ],
@@ -383,29 +368,27 @@ class DashboardScreen extends ConsumerWidget {
   }
 
   Widget _buildRecentStudentItem(BuildContext context, StudentModel student) {
+    final theme = Theme.of(context);
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: theme.cardTheme.color,
         borderRadius: BorderRadius.circular(16),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withAlpha((255 * 0.02).round()),
-            blurRadius: 10,
-            offset: const Offset(0, 4),
-          ),
-        ],
+        // FIXED: Use Border.all
+        border: theme.brightness == Brightness.dark
+            ? Border.all(color: theme.dividerColor.withOpacity(0.1))
+            : null,
       ),
       child: Row(
         children: [
           CircleAvatar(
-            radius: 24,
-            backgroundColor: const Color(0xFFE3F2FD),
+            radius: 22,
+            backgroundColor: theme.colorScheme.primary.withOpacity(0.1),
             child: Text(
               student.fullName[0].toUpperCase(),
-              style: const TextStyle(
-                color: Color(0xFF2196F3),
+              style: TextStyle(
+                color: theme.colorScheme.primary,
                 fontWeight: FontWeight.bold,
               ),
             ),
@@ -417,27 +400,18 @@ class DashboardScreen extends ConsumerWidget {
               children: [
                 Text(
                   student.fullName,
-                  style: const TextStyle(
-                    fontWeight: FontWeight.bold,
-                    fontSize: 15,
-                  ),
+                  style: theme.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.bold),
                 ),
                 Text(
                   'Seat: ${student.assignedSeatNumber ?? 'N/A'}',
-                  style: TextStyle(
-                    color: Colors.grey.shade500,
-                    fontSize: 13,
-                  ),
+                  style: theme.textTheme.bodySmall,
                 ),
               ],
             ),
           ),
           Text(
             DateFormat('dd MMM').format(student.admissionDate),
-            style: TextStyle(
-              color: Colors.grey.shade500,
-              fontSize: 13,
-            ),
+            style: theme.textTheme.bodySmall,
           ),
         ],
       ),
@@ -497,5 +471,13 @@ class DashboardScreen extends ConsumerWidget {
         }
       }
     }
+  }
+}
+extension ColorBrightness on Color {
+  Color darker(double amount) {
+    assert(amount >= 0 && amount <= 1);
+    final hsl = HSLColor.fromColor(this);
+    final hslDark = hsl.withLightness((hsl.lightness - amount).clamp(0.0, 1.0));
+    return hslDark.toColor();
   }
 }
