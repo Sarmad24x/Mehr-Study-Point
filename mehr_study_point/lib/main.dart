@@ -13,7 +13,7 @@ import 'package:google_fonts/google_fonts.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  
+
   await Hive.initFlutter();
 
   try {
@@ -50,7 +50,7 @@ class MyApp extends ConsumerWidget {
       theme: ThemeData(
         useMaterial3: true,
         brightness: Brightness.light,
-        textTheme: GoogleFonts.poppinsTextTheme(Theme.of(context).textTheme),
+        textTheme: GoogleFonts.poppinsTextTheme(), // Use default Poppins theme
         colorScheme: ColorScheme.fromSeed(
           seedColor: const Color(0xFF2D62ED),
           primary: const Color(0xFF2D62ED),
@@ -94,13 +94,15 @@ class MyApp extends ConsumerWidget {
       darkTheme: ThemeData(
         useMaterial3: true,
         brightness: Brightness.dark,
-        textTheme: GoogleFonts.poppinsTextTheme(ThemeData(brightness: Brightness.dark).textTheme),
+        textTheme: GoogleFonts.poppinsTextTheme(
+          ThemeData(brightness: Brightness.dark).textTheme,
+        ),
         colorScheme: ColorScheme.fromSeed(
           seedColor: const Color(0xFF2D62ED),
           brightness: Brightness.dark,
         ),
       ),
-      home: showSplash 
+      home: showSplash
           ? SplashScreen(onPressed: () => ref.read(showSplashProvider.notifier).state = false)
           : const AuthChecker(),
     );
