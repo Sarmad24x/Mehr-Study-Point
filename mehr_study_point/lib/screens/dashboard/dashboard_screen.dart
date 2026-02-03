@@ -7,12 +7,11 @@ import '../../providers/dashboard_provider.dart';
 import '../../providers/service_providers.dart';
 import '../../providers/student_provider.dart';
 import '../../providers/fee_provider.dart';
-import '../../providers/seat_provider.dart';
 import '../../models/user_model.dart';
-import '../../models/seat_model.dart';
 import '../../models/student_model.dart';
 import '../../models/fee_model.dart';
-import '../students/student_details_screen.dart';
+import '../students/add_student_screen.dart';
+import '../fees/fee_management_screen.dart';
 
 class DashboardScreen extends ConsumerWidget {
   const DashboardScreen({super.key});
@@ -22,7 +21,6 @@ class DashboardScreen extends ConsumerWidget {
     final userProfile = ref.watch(userProfileProvider).value;
     final stats = ref.watch(dashboardStatsProvider);
     final students = ref.watch(studentsStreamProvider).value ?? [];
-    final seats = ref.watch(seatsStreamProvider).value ?? [];
 
     if (userProfile?.role == UserRole.admin) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -30,109 +28,163 @@ class DashboardScreen extends ConsumerWidget {
       });
     }
 
-    // Get 3 most recent active students
     final recentStudents = students
         .where((s) => s.status == 'Active')
         .toList()
       ..sort((a, b) => b.admissionDate.compareTo(a.admissionDate));
-    final displayStudents = recentStudents.take(3).toList();
+    final displayStudents = recentStudents.take(2).toList();
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Mehr Study Point'),
-        centerTitle: true,
-      ),
       body: RefreshIndicator(
         onRefresh: () async => ref.refresh(dashboardStatsProvider),
         child: SingleChildScrollView(
           physics: const AlwaysScrollableScrollPhysics(),
-          padding: const EdgeInsets.all(16.0),
+          padding: const EdgeInsets.fromLTRB(20, 60, 20, 20),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
+              // Header
               Row(
                 children: [
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'Welcome, ${userProfile?.name ?? 'User'}',
-                        style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                              fontWeight: FontWeight.bold,
-                            ),
-                      ),
-                      Text(
-                        DateFormat('EEEE, dd MMMM').format(DateTime.now()),
-                        style: const TextStyle(color: Colors.grey),
-                      ),
-                    ],
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Welcome back, ${userProfile?.name.split(' ').first ?? 'Admin'}',
+                          style: const TextStyle(
+                            fontSize: 24,
+                            fontWeight: FontWeight.bold,
+                            color: Color(0xFF1A1C1E),
+                          ),
+                        ),
+                        Text(
+                          DateFormat('EEEE, dd MMMM').format(DateTime.now()),
+                          style: TextStyle(
+                            fontSize: 14,
+                            color: Colors.grey.shade600,
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
-                  const Spacer(),
                   CircleAvatar(
-                    backgroundColor: Colors.blue.shade100,
-                    child: const Icon(Icons.person, color: Colors.blue),
+                    radius: 25,
+                    backgroundImage: userProfile?.photoUrl != null
+                        ? NetworkImage(userProfile!.photoUrl!)
+                        : null,
+                    backgroundColor: Colors.grey.shade200,
+                    child: userProfile?.photoUrl == null
+                        ? const Icon(Icons.person, color: Colors.grey)
+                        : null,
                   ),
                 ],
               ),
-              const SizedBox(height: 24),
+              const SizedBox(height: 30),
               
               // Stat Cards
-              GridView.count(
-                shrinkWrap: true,
-                physics: const NeverScrollableScrollPhysics(),
-                crossAxisCount: 2,
-                crossAxisSpacing: 12,
-                mainAxisSpacing: 12,
-                childAspectRatio: 1.5,
+              Row(
                 children: [
-                  _buildStatCard(context, 'Active Students', stats.activeStudents.toString(), Icons.people, Colors.green),
-                  _buildStatCard(context, 'Pending Fees', 'Rs. ${stats.pendingFees.toInt()}', Icons.account_balance_wallet, Colors.orange),
+                  Expanded(
+                    child: _buildStatCard(
+                      context,
+                      'Active Students',
+                      stats.activeStudents.toString(),
+                      Icons.people_alt_rounded,
+                      const Color(0xFF4CAF50),
+                      const Color(0xFFE8F5E9),
+                    ),
+                  ),
+                  const SizedBox(width: 15),
+                  Expanded(
+                    child: _buildStatCard(
+                      context,
+                      'Pending Fees',
+                      'Rs. ${stats.pendingFees.toInt()}',
+                      Icons.account_balance_wallet_rounded,
+                      const Color(0xFFEF6C00),
+                      const Color(0xFFFFF3E0),
+                    ),
+                  ),
                 ],
               ),
               const SizedBox(height: 24),
 
-              // Visual Charts Row
-              _buildChartCard(
-                context, 
-                title: 'Seat Occupancy',
-                chart: _buildOccupancyPie(stats),
-              ),
-              const SizedBox(height: 24),
+              // Seat Occupancy
+              _buildOccupancyCard(context, stats),
+              const SizedBox(height: 30),
 
-              // Recent Students Section (Using StudentModel)
-              if (displayStudents.isNotEmpty) ...[
-                Text(
-                  'Recent Enrollments',
-                  style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
+              // Quick Actions
+              const Text(
+                'Quick Actions',
+                style: TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                  color: Color(0xFF1A1C1E),
                 ),
-                const SizedBox(height: 12),
-                ...displayStudents.map((student) => Card(
-                  margin: const EdgeInsets.only(bottom: 8),
-                  child: ListTile(
-                    leading: CircleAvatar(
-                      child: Text(student.fullName[0].toUpperCase()),
-                    ),
-                    title: Text(student.fullName),
-                    subtitle: Text('Seat: ${student.assignedSeatNumber ?? 'N/A'}'),
-                    trailing: Text(DateFormat('dd MMM').format(student.admissionDate)),
-                    onTap: () => Navigator.push(
-                      context, 
-                      MaterialPageRoute(builder: (context) => StudentDetailsScreen(student: student)),
+              ),
+              const SizedBox(height: 16),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  _buildQuickAction(
+                    context,
+                    'Add Student',
+                    Icons.person_add_alt_1_rounded,
+                    const Color(0xFF2D62ED),
+                    true,
+                    onTap: () => Navigator.push(context, MaterialPageRoute(builder: (context) => const AddStudentScreen())),
+                  ),
+                  _buildQuickAction(
+                    context,
+                    'Assign Seat',
+                    Icons.event_seat_rounded,
+                    Colors.blue.shade700,
+                    false,
+                    onTap: () {}, // Navigate to seat assignment or similar
+                  ),
+                  _buildQuickAction(
+                    context,
+                    'Collect Fee',
+                    Icons.payments_rounded,
+                    Colors.blue.shade700,
+                    false,
+                    onTap: () => Navigator.push(context, MaterialPageRoute(builder: (context) => const FeeManagementScreen())),
+                  ),
+                  _buildQuickAction(
+                    context,
+                    'Reports',
+                    Icons.bar_chart_rounded,
+                    Colors.blue.shade700,
+                    false,
+                    onTap: () {},
+                  ),
+                ],
+              ),
+              const SizedBox(height: 30),
+
+              // Recent Enrollments
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  const Text(
+                    'Recent Enrollments',
+                    style: TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                      color: Color(0xFF1A1C1E),
                     ),
                   ),
-                )),
-                const SizedBox(height: 24),
-              ],
-
-              // Zone Breakdown (Using SeatModel)
-              Text(
-                'Zone Summary',
-                style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
+                  TextButton(
+                    onPressed: () {}, // Navigate to all students
+                    child: const Text('View All', style: TextStyle(color: Color(0xFF2D62ED))),
+                  ),
+                ],
               ),
-              const SizedBox(height: 12),
-              _buildZoneSummary(seats),
+              const SizedBox(height: 8),
+              ...displayStudents.map((student) => _buildRecentStudentItem(context, student)),
 
-              const SizedBox(height: 100), 
+              const SizedBox(height: 20),
             ],
           ),
         ),
@@ -140,109 +192,258 @@ class DashboardScreen extends ConsumerWidget {
     );
   }
 
-  Widget _buildZoneSummary(List<SeatModel> seats) {
-    if (seats.isEmpty) return const Card(child: ListTile(title: Text('No seats initialized')));
-    
-    final zones = seats.map((s) => s.zone ?? 'General').toSet().toList();
-    zones.sort();
-
-    return Card(
-      child: ListView.separated(
-        shrinkWrap: true,
-        physics: const NeverScrollableScrollPhysics(),
-        itemCount: zones.length,
-        separatorBuilder: (context, index) => const Divider(height: 1),
-        itemBuilder: (context, index) {
-          final zone = zones[index];
-          final zoneSeats = seats.where((s) => (s.zone ?? 'General') == zone).toList();
-          final occupied = zoneSeats.where((s) => s.status == SeatStatus.reserved).length;
-          
-          return ListTile(
-            title: Text(zone),
-            subtitle: Text('Occupancy: $occupied / ${zoneSeats.length}'),
-            trailing: SizedBox(
-              width: 100,
-              child: LinearProgressIndicator(
-                value: zoneSeats.isEmpty ? 0 : occupied / zoneSeats.length,
-                backgroundColor: Colors.grey.shade200,
-                color: (occupied / zoneSeats.length) > 0.8 ? Colors.red : Colors.blue,
-              ),
-            ),
-          );
-        },
-      ),
-    );
-  }
-
-  Widget _buildChartCard(BuildContext context, {required String title, required Widget chart}) {
-    return Card(
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-      elevation: 0,
-      color: Colors.blue.shade50.withOpacity(0.5),
-      child: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(title, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
-            const SizedBox(height: 20),
-            SizedBox(height: 200, child: chart),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildOccupancyPie(DashboardStats stats) {
-    final reserved = stats.totalSeats - stats.availableSeats;
-    if (stats.totalSeats == 0) return const Center(child: Text('No data'));
-
-    return PieChart(
-      PieChartData(
-        sectionsSpace: 2,
-        centerSpaceRadius: 40,
-        sections: [
-          PieChartSectionData(
-            value: stats.availableSeats.toDouble(),
-            title: '${stats.availableSeats}',
-            color: Colors.green,
-            radius: 50,
-            titleStyle: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
-          ),
-          PieChartSectionData(
-            value: reserved.toDouble(),
-            title: '$reserved',
-            color: Colors.red,
-            radius: 50,
-            titleStyle: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildStatCard(BuildContext context, String title, String value, IconData icon, Color color) {
+  Widget _buildStatCard(BuildContext context, String title, String value, IconData icon, Color color, Color bgColor) {
     return Container(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: color.withOpacity(0.1),
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: color.withOpacity(0.2)),
+        color: bgColor,
+        borderRadius: BorderRadius.circular(24),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
-        mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Icon(icon, color: color, size: 24),
-          const SizedBox(height: 8),
-          Text(value, style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: color)),
-          Text(title, style: TextStyle(fontSize: 12, color: color.withOpacity(0.8))),
+          Container(
+            padding: const EdgeInsets.all(8),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Icon(icon, color: color, size: 24),
+          ),
+          const SizedBox(height: 20),
+          Text(
+            value,
+            style: TextStyle(
+              fontSize: 28,
+              fontWeight: FontWeight.bold,
+              color: color,
+            ),
+          ),
+          Text(
+            title,
+            style: TextStyle(
+              fontSize: 14,
+              color: color.withAlpha((255 * 0.8).round()),
+              fontWeight: FontWeight.w500,
+            ),
+          ),
         ],
       ),
     );
   }
 
-  
+  Widget _buildOccupancyCard(BuildContext context, DashboardStats stats) {
+    final occupied = stats.totalSeats - stats.availableSeats;
+    
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(24),
+      decoration: BoxDecoration(
+        color: const Color(0xFFF0F7FF),
+        borderRadius: BorderRadius.circular(24),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text(
+            'Seat Occupancy',
+            style: TextStyle(
+              fontSize: 18,
+              fontWeight: FontWeight.bold,
+              color: Color(0xFF1A1C1E),
+            ),
+          ),
+          const SizedBox(height: 20),
+          SizedBox(
+            height: 180,
+            child: Stack(
+              children: [
+                PieChart(
+                  PieChartData(
+                    sectionsSpace: 0,
+                    centerSpaceRadius: 65,
+                    startDegreeOffset: -90,
+                    sections: [
+                      PieChartSectionData(
+                        value: stats.availableSeats.toDouble(),
+                        color: const Color(0xFF4CAF50),
+                        radius: 20,
+                        showTitle: false,
+                      ),
+                      PieChartSectionData(
+                        value: occupied.toDouble(),
+                        color: const Color(0xFFF44336),
+                        radius: 20,
+                        showTitle: false,
+                      ),
+                    ],
+                  ),
+                ),
+                Center(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        '${stats.availableSeats}',
+                        style: const TextStyle(
+                          fontSize: 28,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.white, // In image it seems white or very light
+                        ),
+                      ),
+                      Text(
+                        '/${stats.totalSeats}',
+                        style: TextStyle(
+                          fontSize: 14,
+                          color: Colors.white.withAlpha((255 * 0.8).round()),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 20),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              _buildLegendItem('Available (${stats.availableSeats})', const Color(0xFF4CAF50)),
+              const SizedBox(width: 24),
+              _buildLegendItem('Occupied ($occupied)', const Color(0xFFF44336)),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildLegendItem(String label, Color color) {
+    return Row(
+      children: [
+        Container(
+          width: 12,
+          height: 12,
+          decoration: BoxDecoration(
+            color: color,
+            shape: BoxShape.circle,
+          ),
+        ),
+        const SizedBox(width: 8),
+        Text(
+          label,
+          style: TextStyle(
+            fontSize: 12,
+            color: Colors.grey.shade700,
+            fontWeight: FontWeight.w500,
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildQuickAction(BuildContext context, String label, IconData icon, Color color, bool isPrimary, {VoidCallback? onTap}) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Column(
+        children: [
+          Container(
+            width: 65,
+            height: 65,
+            decoration: BoxDecoration(
+              color: isPrimary ? color : Colors.white,
+              borderRadius: BorderRadius.circular(16),
+              boxShadow: [
+                if (!isPrimary)
+                  BoxShadow(
+                    color: Colors.black.withAlpha((255 * 0.05).round()),
+                    blurRadius: 10,
+                    offset: const Offset(0, 4),
+                  ),
+              ],
+            ),
+            child: Icon(
+              icon,
+              color: isPrimary ? Colors.white : color,
+              size: 28,
+            ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            label,
+            style: const TextStyle(
+              fontSize: 11,
+              fontWeight: FontWeight.w500,
+              color: Color(0xFF1A1C1E),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildRecentStudentItem(BuildContext context, StudentModel student) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 12),
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withAlpha((255 * 0.02).round()),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Row(
+        children: [
+          CircleAvatar(
+            radius: 24,
+            backgroundColor: const Color(0xFFE3F2FD),
+            child: Text(
+              student.fullName[0].toUpperCase(),
+              style: const TextStyle(
+                color: Color(0xFF2196F3),
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+          ),
+          const SizedBox(width: 16),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  student.fullName,
+                  style: const TextStyle(
+                    fontWeight: FontWeight.bold,
+                    fontSize: 15,
+                  ),
+                ),
+                Text(
+                  'Seat: ${student.assignedSeatNumber ?? 'N/A'}',
+                  style: TextStyle(
+                    color: Colors.grey.shade500,
+                    fontSize: 13,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          Text(
+            DateFormat('dd MMM').format(student.admissionDate),
+            style: TextStyle(
+              color: Colors.grey.shade500,
+              fontSize: 13,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   Future<void> _checkAndPromptMonthlyFees(BuildContext context, WidgetRef ref) async {
     final fees = ref.read(feesStreamProvider).value ?? [];
     final currentMonthStr = DateFormat('MMMM yyyy').format(DateTime.now());

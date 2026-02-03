@@ -20,12 +20,15 @@ class UserModel {
   final String name;
   @HiveField(3)
   final UserRole role;
+  @HiveField(4)
+  final String? photoUrl;
 
   UserModel({
     required this.id,
     required this.email,
     required this.name,
     required this.role,
+    this.photoUrl,
   });
 
   Map<String, dynamic> toMap() {
@@ -34,6 +37,7 @@ class UserModel {
       'email': email,
       'name': name,
       'role': role.name,
+      'photoUrl': photoUrl,
     };
   }
 
@@ -43,18 +47,21 @@ class UserModel {
       email: map['email'] ?? '',
       name: map['name'] ?? '',
       role: UserRole.values.byName(map['role'] ?? 'employee'),
+      photoUrl: map['photoUrl'] as String?,
     );
   }
 
   UserModel copyWith({
     String? name,
     UserRole? role,
+    String? photoUrl,
   }) {
     return UserModel(
       id: id,
       email: email,
       name: name ?? this.name,
       role: role ?? this.role,
+      photoUrl: photoUrl ?? this.photoUrl,
     );
   }
 }
