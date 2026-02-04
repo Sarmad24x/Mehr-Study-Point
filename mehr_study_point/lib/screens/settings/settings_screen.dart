@@ -33,10 +33,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
           ? Colors.grey[50] 
           : null,
       appBar: AppBar(
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios_new, size: 20),
-          onPressed: () => Navigator.of(context).pop(),
-        ),
+        automaticallyImplyLeading: false,
         title: const Text('Settings', style: TextStyle(fontWeight: FontWeight.bold)),
         centerTitle: true,
         elevation: 0,

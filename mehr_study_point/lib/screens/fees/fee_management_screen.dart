@@ -15,16 +15,17 @@ class FeeManagementScreen extends ConsumerWidget {
     final feesAsync = ref.watch(feesStreamProvider);
     final filteredFees = ref.watch(filteredFeesProvider);
     final studentsAsync = ref.watch(studentsStreamProvider);
+    final canPop = ModalRoute.of(context)?.canPop ?? false;
 
     return Scaffold(
       backgroundColor: Theme.of(context).brightness == Brightness.light 
           ? Colors.grey[50] 
           : null,
       appBar: AppBar(
-        leading: IconButton(
+        leading: canPop ? IconButton(
           icon: const Icon(Icons.arrow_back_ios_new, size: 20),
           onPressed: () => Navigator.of(context).pop(),
-        ),
+        ) : null,
         title: const Text('Fee Management', style: TextStyle(fontWeight: FontWeight.bold)),
         centerTitle: true,
         elevation: 0,

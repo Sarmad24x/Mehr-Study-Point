@@ -19,10 +19,7 @@ class StudentListScreen extends ConsumerWidget {
           ? Colors.grey[50] 
           : null,
       appBar: AppBar(
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios_new, size: 20),
-          onPressed: () => Navigator.of(context).pop(),
-        ),
+        automaticallyImplyLeading: false, // This removes the back button
         title: const Text('Student Management', style: TextStyle(fontWeight: FontWeight.bold)),
         centerTitle: true,
         elevation: 0,
