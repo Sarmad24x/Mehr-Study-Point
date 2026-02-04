@@ -8,6 +8,7 @@ import '../../providers/dashboard_provider.dart';
 import '../../providers/student_provider.dart';
 import '../../providers/fee_provider.dart';
 import '../../models/user_model.dart';
+import '../../models/fee_model.dart';
 import '../students/add_student_screen.dart';
 import '../fees/fee_management_screen.dart';
 import 'widgets/stat_card.dart';
