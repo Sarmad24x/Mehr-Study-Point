@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 import 'package:fl_chart/fl_chart.dart';
+import 'package:collection/collection.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/dashboard_provider.dart';
 import '../../providers/service_providers.dart';
@@ -158,6 +159,8 @@ class DashboardScreen extends ConsumerWidget {
               ),
               const SizedBox(height: 30),
 
+              _buildUpcomingRenewals(context, ref),
+
               // Recent Enrollments
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -191,7 +194,6 @@ class DashboardScreen extends ConsumerWidget {
       decoration: BoxDecoration(
         color: isDark ? Theme.of(context).colorScheme.surface : accentColor.withOpacity(0.12),
         borderRadius: BorderRadius.circular(24),
-        // FIXED: Use Border.all instead of BorderSide
         border: isDark ? Border.all(color: accentColor.withOpacity(0.3)) : null,
       ),
       child: Column(
@@ -211,7 +213,6 @@ class DashboardScreen extends ConsumerWidget {
             style: TextStyle(
               fontSize: 24,
               fontWeight: FontWeight.bold,
-              // FIXED: Replaced .darker() with a standard HSL manipulation
               color: isDark ? Colors.white : HSLColor.fromColor(accentColor).withLightness(0.3).toColor(),
             ),
           ),
@@ -239,7 +240,6 @@ class DashboardScreen extends ConsumerWidget {
       decoration: BoxDecoration(
         color: isDark ? theme.colorScheme.surface : const Color(0xFFF0F7FF),
         borderRadius: BorderRadius.circular(24),
-        // FIXED: Use Border.all
         border: isDark ? Border.all(color: theme.colorScheme.outline.withOpacity(0.2)) : null,
       ),
       child: Column(
@@ -367,6 +367,111 @@ class DashboardScreen extends ConsumerWidget {
     );
   }
 
+  Widget _buildUpcomingRenewals(BuildContext context, WidgetRef ref) {
+    final theme = Theme.of(context);
+    final fees = ref.watch(feesStreamProvider).value ?? [];
+    final students = ref.watch(studentsStreamProvider).value ?? [];
+
+    if (fees.isEmpty || students.isEmpty) {
+      return const SizedBox.shrink();
+    }
+
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+    final threeDaysFromNow = today.add(const Duration(days: 4));
+
+    final upcomingFees = fees.where((fee) {
+      final dueDate = fee.dueDate;
+      return (fee.status == FeeStatus.pending || fee.status == FeeStatus.partial) &&
+          !dueDate.isBefore(today) &&
+          dueDate.isBefore(threeDaysFromNow);
+    }).toList();
+
+    if (upcomingFees.isEmpty) {
+      return const SizedBox.shrink();
+    }
+
+    upcomingFees.sort((a, b) => a.dueDate.compareTo(b.dueDate));
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'Upcoming Renewals',
+          style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
+        ),
+        const SizedBox(height: 16),
+        ...upcomingFees.map((fee) {
+          final student = students.firstWhereOrNull((s) => s.id == fee.studentId);
+          if (student == null) {
+            return const SizedBox.shrink(); // Don't build for a deleted student
+          }
+          return _buildRenewalItem(context, fee, student);
+        }),
+        const SizedBox(height: 30),
+      ],
+    );
+  }
+
+  Widget _buildRenewalItem(BuildContext context, FeeModel fee, StudentModel student) {
+    final theme = Theme.of(context);
+    final remaining = fee.amount - fee.paidAmount;
+    final isDueToday =
+        fee.dueDate.day == DateTime.now().day &&
+        fee.dueDate.month == DateTime.now().month &&
+        fee.dueDate.year == DateTime.now().year;
+
+    return Container(
+      margin: const EdgeInsets.only(bottom: 12),
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: theme.cardTheme.color,
+        borderRadius: BorderRadius.circular(16),
+        border: theme.brightness == Brightness.dark
+            ? Border.all(color: theme.dividerColor.withOpacity(0.1))
+            : null,
+      ),
+      child: Row(
+        children: [
+          CircleAvatar(
+            radius: 22,
+            backgroundColor: theme.colorScheme.secondary.withOpacity(0.1),
+            child: Text(
+              student.fullName.isNotEmpty ? student.fullName[0].toUpperCase() : '?',
+              style: TextStyle(
+                color: theme.colorScheme.secondary,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+          ),
+          const SizedBox(width: 16),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  student.fullName,
+                  style: theme.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.bold),
+                ),
+                Text(
+                  'Owed: Rs. ${remaining.toInt()}',
+                  style: theme.textTheme.bodySmall,
+                ),
+              ],
+            ),
+          ),
+          Text(
+            isDueToday ? 'Due Today' : 'Due: ${DateFormat('dd MMM').format(fee.dueDate)}',
+            style: theme.textTheme.bodySmall?.copyWith(
+                color: isDueToday ? theme.colorScheme.error : null,
+                fontWeight: isDueToday ? FontWeight.bold : FontWeight.normal),
+          ),
+        ],
+      ),
+    );
+  }
+
+
   Widget _buildRecentStudentItem(BuildContext context, StudentModel student) {
     final theme = Theme.of(context);
     return Container(
@@ -375,7 +480,6 @@ class DashboardScreen extends ConsumerWidget {
       decoration: BoxDecoration(
         color: theme.cardTheme.color,
         borderRadius: BorderRadius.circular(16),
-        // FIXED: Use Border.all
         border: theme.brightness == Brightness.dark
             ? Border.all(color: theme.dividerColor.withOpacity(0.1))
             : null,
@@ -403,7 +507,7 @@ class DashboardScreen extends ConsumerWidget {
                   style: theme.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.bold),
                 ),
                 Text(
-                  'Seat: ${student.assignedSeatNumber ?? 'N/A'}',
+                  'Seat: ${student.assignedSeatNumber ?? 'N/A'}' ,
                   style: theme.textTheme.bodySmall,
                 ),
               ],
@@ -421,11 +525,10 @@ class DashboardScreen extends ConsumerWidget {
   Future<void> _checkAndPromptMonthlyFees(BuildContext context, WidgetRef ref) async {
     final fees = ref.read(feesStreamProvider).value ?? [];
     final currentMonthStr = DateFormat('MMMM yyyy').format(DateTime.now());
-    
-    final alreadyGenerated = fees.any((f) => 
-      f.type == 'Monthly' && 
-      DateFormat('MMMM yyyy').format(f.dueDate) == currentMonthStr
-    );
+
+    final alreadyGenerated = fees.any((f) =>
+      f.type == 'Monthly' &&
+      DateFormat('MMMM yyyy').format(f.dueDate) == currentMonthStr);
 
     if (!alreadyGenerated && fees.isNotEmpty) {
       final confirm = await showDialog<bool>(
@@ -473,6 +576,7 @@ class DashboardScreen extends ConsumerWidget {
     }
   }
 }
+
 extension ColorBrightness on Color {
   Color darker(double amount) {
     assert(amount >= 0 && amount <= 1);

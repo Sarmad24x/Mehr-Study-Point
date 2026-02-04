@@ -31,47 +31,58 @@ class _MainNavigationState extends ConsumerState<MainNavigation> {
       const SettingsScreen(),
     ];
 
-    return Scaffold(
-      body: IndexedStack(
-        index: _selectedIndex,
-        children: screens,
-      ),
-      bottomNavigationBar: NavigationBar(
-        selectedIndex: _selectedIndex,
-        onDestinationSelected: (index) {
+    return WillPopScope(
+      onWillPop: () async {
+        if (_selectedIndex != 0) {
           setState(() {
-            _selectedIndex = index;
+            _selectedIndex = 0;
           });
-        },
-        destinations: [
-          const NavigationDestination(
-            icon: Icon(Icons.dashboard_outlined),
-            selectedIcon: Icon(Icons.dashboard),
-            label: 'Dashboard',
-          ),
-          const NavigationDestination(
-            icon: Icon(Icons.event_seat_outlined),
-            selectedIcon: Icon(Icons.event_seat),
-            label: 'Seats',
-          ),
-          const NavigationDestination(
-            icon: Icon(Icons.people_outline),
-            selectedIcon: Icon(Icons.people),
-            label: 'Students',
-          ),
-          if (isAdmin) ...[
+          return false; // Prevent app from exiting
+        }
+        return true; // Allow app to exit
+      },
+      child: Scaffold(
+        body: IndexedStack(
+          index: _selectedIndex,
+          children: screens,
+        ),
+        bottomNavigationBar: NavigationBar(
+          selectedIndex: _selectedIndex,
+          onDestinationSelected: (index) {
+            setState(() {
+              _selectedIndex = index;
+            });
+          },
+          destinations: [
             const NavigationDestination(
-              icon: Icon(Icons.account_balance_wallet_outlined),
-              selectedIcon: Icon(Icons.account_balance_wallet),
-              label: 'Fees',
+              icon: Icon(Icons.dashboard_outlined),
+              selectedIcon: Icon(Icons.dashboard),
+              label: 'Dashboard',
+            ),
+            const NavigationDestination(
+              icon: Icon(Icons.event_seat_outlined),
+              selectedIcon: Icon(Icons.event_seat),
+              label: 'Seats',
+            ),
+            const NavigationDestination(
+              icon: Icon(Icons.people_outline),
+              selectedIcon: Icon(Icons.people),
+              label: 'Students',
+            ),
+            if (isAdmin) ...[
+              const NavigationDestination(
+                icon: Icon(Icons.account_balance_wallet_outlined),
+                selectedIcon: Icon(Icons.account_balance_wallet),
+                label: 'Fees',
+              ),
+            ],
+            const NavigationDestination(
+              icon: Icon(Icons.settings_outlined),
+              selectedIcon: Icon(Icons.settings),
+              label: 'Settings',
             ),
           ],
-          const NavigationDestination(
-            icon: Icon(Icons.settings_outlined),
-            selectedIcon: Icon(Icons.settings),
-            label: 'Settings',
-          ),
-        ],
+        ),
       ),
     );
   }

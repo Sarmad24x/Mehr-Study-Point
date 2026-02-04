@@ -83,14 +83,13 @@ class FeeManagementScreen extends ConsumerWidget {
                   itemCount: filteredFees.length,
                   itemBuilder: (context, index) {
                     final fee = filteredFees[index];
-                    final student = studentsAsync.value?.firstWhere(
+                    final student = studentsAsync.value?.where(
                       (s) => s.id == fee.studentId,
-                      orElse: () => throw Exception('Student not found'),
-                    );
+                    ).firstOrNull;
 
                     return _FeeListItem(
                       fee: fee,
-                      studentName: student?.fullName ?? 'Unknown Student',
+                      studentName: student?.fullName ?? 'Deleted Student',
                       onTap: () => _showPaymentDialog(context, ref, fee),
                     );
                   },
