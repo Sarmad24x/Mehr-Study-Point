@@ -1,4 +1,6 @@
+
 import 'package:hive/hive.dart';
+import 'package:equatable/equatable.dart';
 
 part 'seat_model.g.dart';
 
@@ -11,11 +13,11 @@ enum SeatStatus {
   @HiveField(2)
   maintenance,
   @HiveField(3)
-  held,
+  held
 }
 
 @HiveType(typeId: 4)
-class SeatModel {
+class SeatModel extends Equatable {
   @HiveField(0)
   final String id;
   @HiveField(1)
@@ -25,11 +27,11 @@ class SeatModel {
   @HiveField(3)
   final String? studentId;
   @HiveField(4)
-  final String? zone;
+  final String? zone; // Library area/wing
   @HiveField(5)
   final DateTime? holdExpiresAt;
 
-  SeatModel({
+  const SeatModel({
     required this.id,
     required this.seatNumber,
     required this.status,
@@ -37,6 +39,27 @@ class SeatModel {
     this.zone,
     this.holdExpiresAt,
   });
+
+  @override
+  List<Object?> get props => [id, seatNumber, status, studentId, zone, holdExpiresAt];
+
+  SeatModel copyWith({
+    String? id,
+    String? seatNumber,
+    SeatStatus? status,
+    String? studentId,
+    String? zone,
+    DateTime? holdExpiresAt,
+  }) {
+    return SeatModel(
+      id: id ?? this.id,
+      seatNumber: seatNumber ?? this.seatNumber,
+      status: status ?? this.status,
+      studentId: studentId ?? this.studentId,
+      zone: zone ?? this.zone,
+      holdExpiresAt: holdExpiresAt ?? this.holdExpiresAt,
+    );
+  }
 
   Map<String, dynamic> toMap() {
     return {
@@ -59,22 +82,6 @@ class SeatModel {
       holdExpiresAt: map['holdExpiresAt'] != null 
           ? DateTime.parse(map['holdExpiresAt']) 
           : null,
-    );
-  }
-
-  SeatModel copyWith({
-    SeatStatus? status,
-    String? studentId,
-    String? zone,
-    DateTime? holdExpiresAt,
-  }) {
-    return SeatModel(
-      id: id,
-      seatNumber: seatNumber,
-      status: status ?? this.status,
-      studentId: studentId ?? this.studentId,
-      zone: zone ?? this.zone,
-      holdExpiresAt: holdExpiresAt ?? this.holdExpiresAt,
     );
   }
 }

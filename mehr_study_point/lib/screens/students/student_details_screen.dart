@@ -1,3 +1,4 @@
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
@@ -309,64 +310,32 @@ class StudentDetailsScreen extends ConsumerWidget {
 
   void _showSwapDialog(BuildContext context, WidgetRef ref, dynamic currentUser) {
     if (currentUser == null) return;
-    final seatsAsync = ref.watch(seatsStreamProvider);
-    final availableSeats = seatsAsync.value?.where((s) => s.status == SeatStatus.available).toList() ?? [];
 
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
       shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
       builder: (context) {
-        SeatModel? selectedNewSeat;
-        return StatefulBuilder(
-          builder: (context, setState) {
-            return Padding(
-              padding: EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom, left: 20, right: 20, top: 20),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Text('Swap Student Seat', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
-                  const SizedBox(height: 8),
-                  Text('Moving from Seat ${student.assignedSeatNumber} to:', style: TextStyle(color: Colors.grey.shade600)),
-                  const SizedBox(height: 20),
-                  DropdownButtonFormField<SeatModel>(
-                    decoration: InputDecoration(
-                      labelText: 'Select New Seat',
-                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-                    ),
-                    value: selectedNewSeat,
-                    items: availableSeats.map((s) => DropdownMenuItem(value: s, child: Text('Seat ${s.seatNumber}'))).toList(),
-                    onChanged: (val) => setState(() => selectedNewSeat = val),
-                  ),
-                  const SizedBox(height: 24),
-                  SizedBox(
-                    width: double.infinity,
-                    height: 50,
-                    child: ElevatedButton(
-                      style: ElevatedButton.styleFrom(shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12))),
-                      onPressed: selectedNewSeat == null ? null : () async {
-                        final oldSeat = seatsAsync.value?.firstWhere((s) => s.id == student.assignedSeatId);
-                        if (oldSeat != null) {
-                          await ref.read(seatServiceProvider).swapSeat(
-                            student: student,
-                            oldSeat: oldSeat,
-                            newSeat: selectedNewSeat!,
-                            currentUser: currentUser,
-                          );
-                          if (context.mounted) {
-                            Navigator.pop(context); // Close sheet
-                            Navigator.pop(context); // Go back to list to refresh
-                            ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Seat swapped successfully')));
-                          }
-                        }
-                      },
-                      child: const Text('CONFIRM SWAP', style: TextStyle(fontWeight: FontWeight.bold)),
-                    ),
-                  ),
-                  const SizedBox(height: 30),
-                ],
-              ),
+        return Consumer(
+          builder: (context, ref, child) {
+            final seatsAsync = ref.watch(seatsStreamProvider);
+            final availableSeats = seatsAsync.value?.where((s) => s.status == SeatStatus.available).toSet().toList() ?? [];
+            
+            return _SwapDialogContent(
+              student: student,
+              availableSeats: availableSeats,
+              currentUser: currentUser,
+              onSwap: (newSeat) async {
+                final oldSeat = seatsAsync.value?.firstWhere((s) => s.id == student.assignedSeatId);
+                if (oldSeat != null) {
+                  await ref.read(seatServiceProvider).swapSeat(
+                    student: student,
+                    oldSeat: oldSeat,
+                    newSeat: newSeat,
+                    currentUser: currentUser,
+                  );
+                }
+              },
             );
           },
         );
@@ -398,6 +367,76 @@ class StudentDetailsScreen extends ConsumerWidget {
         ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Student records deleted')));
       }
     }
+  }
+}
+
+class _SwapDialogContent extends StatefulWidget {
+  final StudentModel student;
+  final List<SeatModel> availableSeats;
+  final dynamic currentUser;
+  final Future<void> Function(SeatModel) onSwap;
+
+  const _SwapDialogContent({
+    required this.student,
+    required this.availableSeats,
+    required this.currentUser,
+    required this.onSwap,
+  });
+
+  @override
+  State<_SwapDialogContent> createState() => _SwapDialogContentState();
+}
+
+class _SwapDialogContentState extends State<_SwapDialogContent> {
+  SeatModel? _selectedNewSeat;
+
+  @override
+  Widget build(BuildContext context) {
+    // If the selected seat is no longer available, deselect it
+    if (_selectedNewSeat != null && !widget.availableSeats.contains(_selectedNewSeat)) {
+      _selectedNewSeat = null;
+    }
+
+    return Padding(
+      padding: EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom, left: 20, right: 20, top: 20),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text('Swap Student Seat', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+          const SizedBox(height: 8),
+          Text('Moving from Seat ${widget.student.assignedSeatNumber} to:', style: TextStyle(color: Colors.grey.shade600)),
+          const SizedBox(height: 20),
+          DropdownButtonFormField<SeatModel>(
+            decoration: InputDecoration(
+              labelText: 'Select New Seat',
+              border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+            ),
+            value: _selectedNewSeat,
+            items: widget.availableSeats.map((s) => DropdownMenuItem(value: s, child: Text('Seat ${s.seatNumber}'))).toList(),
+            onChanged: (val) => setState(() => _selectedNewSeat = val),
+          ),
+          const SizedBox(height: 24),
+          SizedBox(
+            width: double.infinity,
+            height: 50,
+            child: ElevatedButton(
+              style: ElevatedButton.styleFrom(shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12))),
+              onPressed: _selectedNewSeat == null ? null : () async {
+                await widget.onSwap(_selectedNewSeat!);
+                if (context.mounted) {
+                  Navigator.pop(context); // Close sheet
+                  Navigator.pop(context); // Go back to list
+                  ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Seat swapped successfully')));
+                }
+              },
+              child: const Text('CONFIRM SWAP', style: TextStyle(fontWeight: FontWeight.bold)),
+            ),
+          ),
+          const SizedBox(height: 30),
+        ],
+      ),
+    );
   }
 }
 

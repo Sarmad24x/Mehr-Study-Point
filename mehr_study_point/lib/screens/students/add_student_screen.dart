@@ -1,3 +1,4 @@
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:uuid/uuid.dart';
@@ -140,9 +141,23 @@ class _AddStudentScreenState extends ConsumerState<AddStudentScreen> {
 
   @override
   Widget build(BuildContext context) {
+    // Listen for changes in the seat provider to prevent state mismatch
+    ref.listen<AsyncValue<List<SeatModel>>>(seatsStreamProvider, (_, next) {
+      final seats = next.value ?? [];
+      final availableSeatIds = seats.where((s) => s.status == SeatStatus.available).map((s) => s.id).toSet();
+      if (_selectedSeat != null && !availableSeatIds.contains(_selectedSeat!.id)) {
+        if(mounted) {
+          setState(() {
+            _selectedSeat = null;
+          });
+        }
+      }
+    });
+
     final isEditing = widget.student != null;
     final seatsAsync = ref.watch(seatsStreamProvider);
-    final availableSeats = seatsAsync.value?.where((s) => s.status == SeatStatus.available).toList() ?? [];
+    // Ensure uniqueness by converting to a Set and back to a List
+    final availableSeats = seatsAsync.value?.where((s) => s.status == SeatStatus.available).toSet().toList() ?? [];
 
     return Scaffold(
       backgroundColor: Theme.of(context).brightness == Brightness.light ? Colors.grey[50] : null,
