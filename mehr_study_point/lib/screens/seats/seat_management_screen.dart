@@ -1,3 +1,4 @@
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
@@ -12,6 +13,9 @@ import '../../models/student_model.dart';
 import '../../models/user_model.dart';
 import '../students/add_student_screen.dart';
 import '../students/student_details_screen.dart';
+import 'widgets/seat_widget.dart';
+import 'widgets/seat_status_filter_chip.dart';
+import 'widgets/seat_zone_filter_chip.dart';
 
 class SeatManagementScreen extends ConsumerStatefulWidget {
   const SeatManagementScreen({super.key});
@@ -87,12 +91,12 @@ class _SeatManagementScreenState extends ConsumerState<SeatManagementScreen> {
       body: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Summary Header (From Provided Image)
+          // Summary Header
           _buildSummaryHeader(filteredSeats),
           
           const SizedBox(height: 8),
 
-          // Search Bar (Styled like Students Screen)
+          // Search Bar
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 20.0, vertical: 8.0),
             child: TextField(
@@ -118,7 +122,7 @@ class _SeatManagementScreenState extends ConsumerState<SeatManagementScreen> {
             ),
           ),
 
-          // Filters (Styled like Students Screen)
+          // Filters
           SingleChildScrollView(
             scrollDirection: Axis.horizontal,
             padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
@@ -126,7 +130,7 @@ class _SeatManagementScreenState extends ConsumerState<SeatManagementScreen> {
               children: [
                 ...SeatStatus.values.map((status) => Padding(
                   padding: const EdgeInsets.only(right: 10.0),
-                  child: _StatusFilterChip(
+                  child: SeatStatusFilterChip(
                     label: status == SeatStatus.maintenance ? 'Maintenance' : _capitalize(status.name),
                     value: status,
                   ),
@@ -138,7 +142,7 @@ class _SeatManagementScreenState extends ConsumerState<SeatManagementScreen> {
                   ),
                 ...zones.map((zone) => Padding(
                   padding: const EdgeInsets.only(right: 10.0),
-                  child: _ZoneFilterChip(
+                  child: SeatZoneFilterChip(
                     label: _capitalize(zone),
                     value: zone,
                   ),
@@ -166,7 +170,7 @@ class _SeatManagementScreenState extends ConsumerState<SeatManagementScreen> {
                     final seat = filteredSeats[index];
                     final isSelected = _selectedSeatIds.contains(seat.id);
 
-                    return _SeatWidget(
+                    return SeatWidget(
                       seat: seat,
                       isSelected: isSelected,
                       onTap: () {
@@ -477,165 +481,6 @@ class _SeatManagementScreenState extends ConsumerState<SeatManagementScreen> {
         actions: [
           TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancel')),
         ],
-      ),
-    );
-  }
-}
-
-class _StatusFilterChip extends ConsumerWidget {
-  final String label;
-  final SeatStatus? value;
-
-  const _StatusFilterChip({
-    required this.label,
-    required this.value,
-  });
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final currentFilter = ref.watch(seatStatusFilterProvider);
-    final isSelected = currentFilter == value;
-    
-    return GestureDetector(
-      onTap: () {
-        ref.read(seatStatusFilterProvider.notifier).state = isSelected ? null : value;
-      },
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 10),
-        decoration: BoxDecoration(
-          color: isSelected 
-              ? Colors.blue.shade700 
-              : (Theme.of(context).brightness == Brightness.light ? Colors.grey[100] : Colors.grey[900]),
-          borderRadius: BorderRadius.circular(25),
-        ),
-        child: Text(
-          label,
-          style: TextStyle(
-            color: isSelected ? Colors.white : Colors.blueGrey.shade600,
-            fontWeight: FontWeight.bold,
-            fontSize: 14,
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class _ZoneFilterChip extends ConsumerWidget {
-  final String label;
-  final String? value;
-
-  const _ZoneFilterChip({
-    required this.label,
-    required this.value,
-  });
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final currentFilter = ref.watch(seatZoneFilterProvider);
-    final isSelected = currentFilter == value;
-    
-    return GestureDetector(
-      onTap: () {
-        ref.read(seatZoneFilterProvider.notifier).state = isSelected ? null : value;
-      },
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 10),
-        decoration: BoxDecoration(
-          color: isSelected 
-              ? Colors.blue.shade700 
-              : (Theme.of(context).brightness == Brightness.light ? Colors.grey[100] : Colors.grey[900]),
-          borderRadius: BorderRadius.circular(25),
-        ),
-        child: Text(
-          label,
-          style: TextStyle(
-            color: isSelected ? Colors.white : Colors.blueGrey.shade600,
-            fontWeight: FontWeight.bold,
-            fontSize: 14,
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class _SeatWidget extends StatelessWidget {
-  final SeatModel seat;
-  final bool isSelected;
-  final VoidCallback onTap;
-  final VoidCallback onLongPress;
-
-  const _SeatWidget({
-    required this.seat,
-    required this.isSelected,
-    required this.onTap,
-    required this.onLongPress,
-  });
-
-  Color _getStatusColor() {
-    switch (seat.status) {
-      case SeatStatus.available: return const Color(0xFF2ECC71);
-      case SeatStatus.reserved: return const Color(0xFFE74C3C);
-      case SeatStatus.maintenance: return const Color(0xFFE67E22);
-      case SeatStatus.held: return const Color(0xFF3498DB);
-    }
-  }
-
-  IconData _getStatusIcon() {
-    switch (seat.status) {
-      case SeatStatus.available:
-      case SeatStatus.reserved:
-        return Icons.chair_rounded;
-      case SeatStatus.maintenance:
-        return Icons.build_rounded;
-      case SeatStatus.held:
-        return Icons.lock_rounded;
-    }
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final color = _getStatusColor();
-    final icon = _getStatusIcon();
-    
-    return InkWell(
-      onTap: onTap,
-      onLongPress: onLongPress,
-      borderRadius: BorderRadius.circular(20),
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 200),
-        decoration: BoxDecoration(
-          color: isSelected ? color : Colors.white,
-          border: Border.all(color: color, width: 2),
-          borderRadius: BorderRadius.circular(20),
-          boxShadow: [
-            BoxShadow(
-              color: isSelected ? color.withOpacity(0.3) : Colors.black.withOpacity(0.05),
-              blurRadius: 8,
-              offset: const Offset(0, 2),
-            ),
-          ],
-        ),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(
-              icon, 
-              color: isSelected ? Colors.white : color,
-              size: 28,
-            ),
-            const SizedBox(height: 6),
-            Text(
-              seat.seatNumber,
-              style: TextStyle(
-                fontWeight: FontWeight.bold,
-                fontSize: 16,
-                color: isSelected ? Colors.white : color,
-              ),
-            ),
-          ],
-        ),
       ),
     );
   }
