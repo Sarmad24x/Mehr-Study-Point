@@ -1,3 +1,4 @@
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../providers/auth_provider.dart';
@@ -7,6 +8,7 @@ import '../screens/students/student_list_screen.dart';
 import '../screens/fees/fee_management_screen.dart';
 import '../screens/settings/settings_screen.dart';
 import '../models/user_model.dart';
+import '../providers/dashboard_provider.dart';
 
 class MainNavigation extends ConsumerStatefulWidget {
   const MainNavigation({super.key});
@@ -17,6 +19,9 @@ class MainNavigation extends ConsumerStatefulWidget {
 
 class _MainNavigationState extends ConsumerState<MainNavigation> {
   int _selectedIndex = 0;
+
+  // Key to force refresh specific screens if needed
+  final GlobalKey<RefreshIndicatorState> _refreshIndicatorKey = GlobalKey<RefreshIndicatorState>();
 
   @override
   Widget build(BuildContext context) {
@@ -34,12 +39,10 @@ class _MainNavigationState extends ConsumerState<MainNavigation> {
     return WillPopScope(
       onWillPop: () async {
         if (_selectedIndex != 0) {
-          setState(() {
-            _selectedIndex = 0;
-          });
-          return false; // Prevent app from exiting
+          setState(() => _selectedIndex = 0);
+          return false;
         }
-        return true; // Allow app to exit
+        return true;
       },
       child: Scaffold(
         body: IndexedStack(
@@ -49,9 +52,11 @@ class _MainNavigationState extends ConsumerState<MainNavigation> {
         bottomNavigationBar: NavigationBar(
           selectedIndex: _selectedIndex,
           onDestinationSelected: (index) {
-            setState(() {
-              _selectedIndex = index;
-            });
+            // Optimization: When switching to Dashboard, refresh the stats
+            if (index == 0) {
+              ref.invalidate(dashboardStatsProvider);
+            }
+            setState(() => _selectedIndex = index);
           },
           destinations: [
             const NavigationDestination(
