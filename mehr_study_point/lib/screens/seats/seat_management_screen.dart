@@ -58,7 +58,7 @@ class _SeatManagementScreenState extends ConsumerState<SeatManagementScreen> {
           ? Colors.grey[50] 
           : null,
       appBar: AppBar(
-        automaticallyImplyLeading: false, // This removes the back button
+        //automaticallyImplyLeading: false, // This removes the back button
         title: Text(
           _isSelectionMode ? '${_selectedSeatIds.length} Selected' : 'Seat Management',
           style: const TextStyle(fontWeight: FontWeight.bold),
