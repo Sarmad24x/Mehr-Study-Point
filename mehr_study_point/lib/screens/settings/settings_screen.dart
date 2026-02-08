@@ -1,3 +1,4 @@
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../providers/auth_provider.dart';
@@ -24,8 +25,6 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
   Widget build(BuildContext context) {
     final userProfile = ref.watch(userProfileProvider).value;
     final themeMode = ref.watch(themeProvider);
-    final students = ref.watch(studentsStreamProvider).value ?? [];
-    final fees = ref.watch(feesStreamProvider).value ?? [];
     final settings = ref.watch(settingsProvider);
 
     return Scaffold(
@@ -134,7 +133,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                       iconColor: Colors.blue.shade700,
                       iconBgColor: Colors.blue.shade50,
                       title: 'Export Data (CSV)',
-                      onTap: () => _showExportOptions(context, students, fees),
+                      onTap: () => _showExportOptions(context),
                     ),
                   ],
                 ),
@@ -163,7 +162,11 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                       title: 'Clear Local Cache',
                       onTap: () async {
                          await ref.read(hiveServiceProvider).clearAll();
-                         if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Cache cleared. Restart App.')));
+                         if (mounted) {
+                           ScaffoldMessenger.of(context).showSnackBar(
+                             const SnackBar(content: Text('Cache cleared. Restart App.'))
+                           );
+                         }
                       },
                     ),
                   ],
@@ -312,7 +315,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     );
 
     if (openingTime != null) {
-      if (!mounted) return;
+      if (!context.mounted) return;
       final closingTime = await showTimePicker(
         context: context,
         initialTime: parseTime(settings['closing_time']),
@@ -359,7 +362,11 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                   : TextButton(
                       onPressed: () async {
                         await ref.read(authServiceProvider).sendEmailVerification();
-                        if(mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Verification email sent!')));
+                        if(context.mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(content: Text('Verification email sent!'))
+                          );
+                        }
                       }, 
                       child: const Text('Verify')
                     ),
@@ -388,12 +395,18 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                     onPressed: () async {
                       try {
                         await ref.read(authServiceProvider).sendPasswordResetEmail(user!.email);
-                        if(mounted) {
+                        if(context.mounted) {
                           Navigator.pop(context);
-                          ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Reset link sent to email!')));
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(content: Text('Reset link sent to email!'))
+                          );
                         }
                       } catch (e) {
-                         if(mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error: $e')));
+                         if(context.mounted) {
+                           ScaffoldMessenger.of(context).showSnackBar(
+                             SnackBar(content: Text('Error: $e'))
+                           );
+                         }
                       }
                     },
                     child: const Text('Forgot Password?'),
@@ -410,12 +423,18 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                         if (passwordController.text.isNotEmpty) {
                           await ref.read(authServiceProvider).changePassword(passwordController.text.trim());
                         }
-                        if(mounted) {
+                        if(context.mounted) {
                           Navigator.pop(context);
-                          ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Account updated successfully!')));
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(content: Text('Account updated successfully!'))
+                          );
                         }
                       } catch (e) {
-                        if(mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error: $e')));
+                        if(context.mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(content: Text('Error: $e'))
+                          );
+                        }
                       }
                     },
                     child: const Text('Save Changes'),
@@ -483,7 +502,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     );
   }
 
-  void _showExportOptions(BuildContext context, dynamic students, dynamic fees) {
+  void _showExportOptions(BuildContext context) {
     showModalBottomSheet(
       context: context,
       builder: (context) => Column(
@@ -494,7 +513,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
             title: const Text('Export Students (CSV)'),
             onTap: () {
               Navigator.pop(context);
-              ref.read(exportServiceProvider).exportStudentsToCSV(students);
+              ref.read(exportServiceProvider).exportStudents(context);
             },
           ),
           ListTile(
@@ -502,7 +521,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
             title: const Text('Export Fees (CSV)'),
             onTap: () {
               Navigator.pop(context);
-              ref.read(exportServiceProvider).exportFeesToCSV(fees);
+              ref.read(exportServiceProvider).exportFees(context);
             },
           ),
           const SizedBox(height: 20),
@@ -511,7 +530,6 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     );
   }
 
-  // Existing methods for Adding and Deleting users...
   void _showAddUserDialog(BuildContext outerContext) {
     final nameController = TextEditingController();
     final emailController = TextEditingController();
@@ -585,7 +603,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
           TextButton(
             onPressed: () async {
               await ref.read(authServiceProvider).deleteUserAccount(employee.id);
-              if (mounted) Navigator.pop(dialogContext);
+              if (dialogContext.mounted) Navigator.pop(dialogContext);
             }, 
             child: const Text('Remove', style: TextStyle(color: Colors.red))
           ),
