@@ -52,13 +52,20 @@ class _SeatManagementScreenState extends ConsumerState<SeatManagementScreen> {
     final userProfile = ref.watch(userProfileProvider).value;
     final isAdmin = userProfile?.role == UserRole.admin;
     final zones = ref.watch(seatZonesProvider);
+    final canPop = ModalRoute.of(context)?.canPop ?? false;
 
     return Scaffold(
       backgroundColor: Theme.of(context).brightness == Brightness.light 
           ? Colors.grey[50] 
           : null,
       appBar: AppBar(
-        automaticallyImplyLeading: false, // This removes the back button
+        leading: canPop
+            ? IconButton(
+          icon: const Icon(Icons.arrow_back_ios_new, size: 20),
+          onPressed: () => Navigator.of(context).pop(),
+        )
+            : null,
+        //automaticallyImplyLeading: false, // This removes the back button
         title: Text(
           _isSelectionMode ? '${_selectedSeatIds.length} Selected' : 'Seat Management',
           style: const TextStyle(fontWeight: FontWeight.bold),
