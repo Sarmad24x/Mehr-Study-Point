@@ -52,20 +52,13 @@ class _SeatManagementScreenState extends ConsumerState<SeatManagementScreen> {
     final userProfile = ref.watch(userProfileProvider).value;
     final isAdmin = userProfile?.role == UserRole.admin;
     final zones = ref.watch(seatZonesProvider);
-    final canPop = ModalRoute.of(context)?.canPop ?? false;
 
     return Scaffold(
       backgroundColor: Theme.of(context).brightness == Brightness.light 
           ? Colors.grey[50] 
           : null,
       appBar: AppBar(
-        leading: canPop
-            ? IconButton(
-          icon: const Icon(Icons.arrow_back_ios_new, size: 20),
-          onPressed: () => Navigator.of(context).pop(),
-        )
-            : null,
-        //automaticallyImplyLeading: false, // This removes the back button
+        automaticallyImplyLeading: false, // This removes the back button
         title: Text(
           _isSelectionMode ? '${_selectedSeatIds.length} Selected' : 'Seat Management',
           style: const TextStyle(fontWeight: FontWeight.bold),
@@ -441,6 +434,14 @@ class _SeatManagementScreenState extends ConsumerState<SeatManagementScreen> {
                   Navigator.push(context, MaterialPageRoute(builder: (context) => const AddStudentScreen()));
                 },
                 child: const Text('Enroll New'),
+              ),
+            ] else if (seat.status == SeatStatus.maintenance && isAdmin) ...[
+              ElevatedButton(
+                onPressed: () async {
+                  await ref.read(seatServiceProvider).updateSeatStatus(seat.id, SeatStatus.available);
+                  if (context.mounted) Navigator.pop(context);
+                },
+                child: const Text('Mark Available'),
               ),
             ],
           ],
