@@ -12,6 +12,7 @@ import '../../models/user_model.dart';
 import '../../models/fee_model.dart';
 import '../students/add_student_screen.dart';
 import '../fees/fee_management_screen.dart';
+import '../reports/reports_screen.dart';
 import 'widgets/stat_card.dart';
 import 'widgets/occupancy_card.dart';
 import 'widgets/quick_action_button.dart';
@@ -166,7 +167,7 @@ class DashboardScreen extends ConsumerWidget {
               label: 'Reports',
               icon: Icons.bar_chart_rounded,
               color: colorScheme.secondary,
-              onTap: () {},
+              onTap: () => Navigator.push(context, MaterialPageRoute(builder: (context) => const ReportsScreen())),
             ),
           ],
         ),

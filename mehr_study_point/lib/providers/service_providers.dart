@@ -1,3 +1,4 @@
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../services/auth_service.dart';
 import '../services/hive_service.dart';
@@ -48,5 +49,5 @@ final feeServiceProvider = Provider<FeeService>((ref) {
 
 // Provider for ExportService
 final exportServiceProvider = Provider<ExportService>((ref) {
-  return ExportService();
+  return ExportService(ref);
 });

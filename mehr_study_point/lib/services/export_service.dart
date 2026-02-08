@@ -1,55 +1,71 @@
+
 import 'dart:io';
 import 'package:csv/csv.dart';
+import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:share_plus/share_plus.dart';
-import '../models/student_model.dart';
-import '../models/fee_model.dart';
+import '../providers/student_provider.dart';
+import '../providers/fee_provider.dart';
+import 'package:intl/intl.dart';
 
 class ExportService {
-  Future<void> exportStudentsToCSV(List<StudentModel> students) async {
-    List<List<dynamic>> rows = [];
+  final Ref ref;
+
+  ExportService(this.ref);
+
+  Future<void> exportStudents(BuildContext context) async {
+    final students = ref.read(studentsStreamProvider).value ?? [];
     
-    // Headers
-    rows.add([
-      "ID", "Full Name", "Contact", "Guardian", "Guardian Contact", 
-      "Address", "Admission Date", "Status", "Seat Number"
-    ]);
+    List<List<dynamic>> rows = [];
+    rows.add(["ID", "Name", "Contact", "Guardian", "Seat", "Status", "Monthly Fee", "Admission Date"]);
 
     for (var s in students) {
       rows.add([
-        s.id, s.fullName, s.contactNumber, s.guardianName ?? '', 
-        s.guardianContact ?? '', s.address, s.admissionDate.toIso8601String(), 
-        s.status, s.assignedSeatNumber ?? ''
+        s.id,
+        s.fullName,
+        s.contactNumber,
+        s.guardianName ?? "N/A",
+        s.assignedSeatNumber ?? "N/A",
+        s.status,
+        s.monthlyFee,
+        DateFormat('yyyy-MM-dd').format(s.admissionDate),
       ]);
     }
 
-    String csvData = const ListToCsvConverter().convert(rows);
-    await _shareFile(csvData, 'students_report.csv');
+    await _saveAndShare(rows, "Student_Directory", context);
   }
 
-  Future<void> exportFeesToCSV(List<FeeModel> fees) async {
-    List<List<dynamic>> rows = [];
+  Future<void> exportFees(BuildContext context) async {
+    final fees = ref.read(feesStreamProvider).value ?? [];
+    final students = ref.read(studentsStreamProvider).value ?? [];
     
-    // Headers
-    rows.add(["ID", "Student ID", "Amount", "Paid Amount", "Due Date", "Paid Date", "Status", "Type"]);
+    List<List<dynamic>> rows = [];
+    rows.add(["Student Name", "Type", "Amount", "Paid", "Status", "Due Date", "Payment Method"]);
 
     for (var f in fees) {
+      final student = students.firstWhere((s) => s.id == f.studentId, orElse: () => students.first);
       rows.add([
-        f.id, f.studentId, f.amount, f.paidAmount, 
-        f.dueDate.toIso8601String(), f.paidDate?.toIso8601String() ?? '', 
-        f.status.name, f.type
+        student.fullName,
+        f.type,
+        f.amount,
+        f.paidAmount,
+        f.status.name,
+        DateFormat('yyyy-MM-dd').format(f.dueDate),
+        f.paymentMethod ?? "N/A",
       ]);
     }
 
-    String csvData = const ListToCsvConverter().convert(rows);
-    await _shareFile(csvData, 'fees_report.csv');
+    await _saveAndShare(rows, "Fee_Ledger", context);
   }
 
-  Future<void> _shareFile(String content, String fileName) async {
-    final directory = await getTemporaryDirectory();
-    final file = File('${directory.path}/$fileName');
-    await file.writeAsString(content);
+  Future<void> _saveAndShare(List<List<dynamic>> rows, String fileName, BuildContext context) async {
+    String csvData = const ListToCsvConverter().convert(rows);
+    final directory = await getApplicationDocumentsDirectory();
+    final pathOfTheFileToWrite = "${directory.path}/$fileName.csv";
+    File file = File(pathOfTheFileToWrite);
+    await file.writeAsString(csvData);
     
-    await Share.shareXFiles([XFile(file.path)], text: 'Exported Report');
+    await Share.shareXFiles([XFile(pathOfTheFileToWrite)], text: '$fileName Export');
   }
 }
