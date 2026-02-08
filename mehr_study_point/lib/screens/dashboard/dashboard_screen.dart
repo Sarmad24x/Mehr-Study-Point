@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 import 'package:collection/collection.dart';
+import 'package:mehr_study_point/screens/seats/seat_management_screen.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/dashboard_provider.dart';
 import '../../providers/student_provider.dart';
@@ -153,7 +154,7 @@ class DashboardScreen extends ConsumerWidget {
               label: 'Assign Seat',
               icon: Icons.event_seat_rounded,
               color: colorScheme.secondary,
-              onTap: () {},
+              onTap: () => Navigator.push(context, MaterialPageRoute(builder: (context) => const SeatManagementScreen())),
             ),
             QuickActionButton(
               label: 'Collect Fee',
