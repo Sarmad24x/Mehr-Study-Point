@@ -1,3 +1,4 @@
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'seat_provider.dart';
 import 'student_provider.dart';
@@ -24,7 +25,11 @@ class DashboardStats {
 }
 
 final dashboardStatsProvider = Provider<DashboardStats>((ref) {
-  final seats = ref.watch(seatsStreamProvider).value ?? [];
+  // By watching the seats stream, this provider will automatically re-run
+  // whenever the seats data changes (e.g., a seat is added or deleted).
+  final seatsAsync = ref.watch(seatsStreamProvider);
+  final seats = seatsAsync.value ?? [];
+  
   final students = ref.watch(studentsStreamProvider).value ?? [];
   final fees = ref.watch(feesStreamProvider).value ?? [];
 
