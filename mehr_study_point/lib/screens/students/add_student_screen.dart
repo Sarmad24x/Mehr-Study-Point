@@ -100,6 +100,7 @@ class _AddStudentScreenState extends ConsumerState<AddStudentScreen> {
           oldValues: widget.student!.toMap(),
         );
       } else {
+        // First add the student (which also updates the seat)
         await ref.read(studentServiceProvider).addStudent(updatedStudent, currentUser);
         
         // Use Future.wait to run fee additions in parallel for speed
@@ -138,7 +139,6 @@ class _AddStudentScreenState extends ConsumerState<AddStudentScreen> {
         );
       }
     }
-    // No finally block to avoid calling setState on a potentially popped/disposed widget
   }
 
   @override
@@ -158,8 +158,22 @@ class _AddStudentScreenState extends ConsumerState<AddStudentScreen> {
 
     final isEditing = widget.student != null;
     final seatsAsync = ref.watch(seatsStreamProvider);
-    // Ensure uniqueness by converting to a Set and back to a List
-    final availableSeats = seatsAsync.value?.where((s) => s.status == SeatStatus.available).toSet().toList() ?? [];
+    
+    // Get and sort available seats
+    final List<SeatModel> availableSeats = (seatsAsync.value ?? [])
+        .where((s) => s.status == SeatStatus.available)
+        .toList();
+    
+    // Sort seats by seat number ascending
+    availableSeats.sort((a, b) {
+      // Try parsing to int for proper numerical sorting (e.g., 2 comes before 10)
+      final aNum = int.tryParse(a.seatNumber);
+      final bNum = int.tryParse(b.seatNumber);
+      if (aNum != null && bNum != null) {
+        return aNum.compareTo(bNum);
+      }
+      return a.seatNumber.compareTo(b.seatNumber);
+    });
 
     return Scaffold(
       backgroundColor: Theme.of(context).brightness == Brightness.light ? Colors.grey[50] : null,

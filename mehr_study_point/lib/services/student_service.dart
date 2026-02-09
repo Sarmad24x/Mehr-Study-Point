@@ -1,3 +1,4 @@
+
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../models/student_model.dart';
 import '../models/audit_log_model.dart';
@@ -34,14 +35,20 @@ class StudentService {
   }
 
   Future<void> addStudent(StudentModel student, UserModel currentUser) async {
-    await _firestore.collection('students').doc(student.id).set(student.toMap());
+    final batch = _firestore.batch();
     
+    // 1. Set Student Data
+    batch.set(_firestore.collection('students').doc(student.id), student.toMap());
+    
+    // 2. Update Seat Status if assigned
     if (student.assignedSeatId != null) {
-      await _firestore.collection('seats').doc(student.assignedSeatId).update({
-        'status': 'reserved',
+      batch.update(_firestore.collection('seats').doc(student.assignedSeatId), {
+        'status': SeatStatus.reserved.name,
         'studentId': student.id,
       });
     }
+
+    await batch.commit();
 
     await _auditService.logAction(AuditLogModel(
       id: '',
@@ -56,7 +63,33 @@ class StudentService {
   }
 
   Future<void> updateStudent(StudentModel student, UserModel currentUser, {Map<String, dynamic>? oldValues}) async {
-    await _firestore.collection('students').doc(student.id).update(student.toMap());
+    final batch = _firestore.batch();
+    
+    // Handle seat changes during update
+    if (oldValues != null) {
+      final oldSeatId = oldValues['assignedSeatId'];
+      final newSeatId = student.assignedSeatId;
+      
+      if (oldSeatId != newSeatId) {
+        // Free old seat
+        if (oldSeatId != null) {
+          batch.update(_firestore.collection('seats').doc(oldSeatId), {
+            'status': SeatStatus.available.name,
+            'studentId': null,
+          });
+        }
+        // Reserve new seat
+        if (newSeatId != null) {
+          batch.update(_firestore.collection('seats').doc(newSeatId), {
+            'status': SeatStatus.reserved.name,
+            'studentId': student.id,
+          });
+        }
+      }
+    }
+
+    batch.update(_firestore.collection('students').doc(student.id), student.toMap());
+    await batch.commit();
 
     await _auditService.logAction(AuditLogModel(
       id: '',
@@ -71,7 +104,7 @@ class StudentService {
     ));
   }
 
-  // MATURE: Mark Student as Left (Archiving)
+  // Mark Student as Left (Archiving)
   Future<void> markStudentAsLeft(StudentModel student, UserModel currentUser) async {
     final batch = _firestore.batch();
 
@@ -107,13 +140,18 @@ class StudentService {
   }
 
   Future<void> deleteStudent(String studentId, UserModel currentUser, {String? seatId}) async {
-    await _firestore.collection('students').doc(studentId).delete();
+    final batch = _firestore.batch();
+    
+    batch.delete(_firestore.collection('students').doc(studentId));
+    
     if (seatId != null) {
-      await _firestore.collection('seats').doc(seatId).update({
-        'status': 'available',
+      batch.update(_firestore.collection('seats').doc(seatId), {
+        'status': SeatStatus.available.name,
         'studentId': null,
       });
     }
+
+    await batch.commit();
 
     await _auditService.logAction(AuditLogModel(
       id: '',
