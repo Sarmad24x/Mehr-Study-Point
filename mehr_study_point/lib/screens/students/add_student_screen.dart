@@ -70,6 +70,10 @@ class _AddStudentScreenState extends ConsumerState<AddStudentScreen> {
     if (currentUser == null) return;
 
     setState(() => _isLoading = true);
+    
+    // Store references to Navigator and ScaffoldMessenger before async gaps
+    final navigator = Navigator.of(context);
+    final scaffoldMessenger = ScaffoldMessenger.of(context);
 
     try {
       final studentId = isEditing ? widget.student!.id : const Uuid().v4();
@@ -98,45 +102,43 @@ class _AddStudentScreenState extends ConsumerState<AddStudentScreen> {
       } else {
         await ref.read(studentServiceProvider).addStudent(updatedStudent, currentUser);
         
-        // 1. Create Admission Fee
+        // Use Future.wait to run fee additions in parallel for speed
         final admissionFeeAmount = double.tryParse(_admissionFeeController.text) ?? 1000.0;
-        await ref.read(feeServiceProvider).addFee(FeeModel(
-          id: const Uuid().v4(),
-          studentId: studentId,
-          amount: admissionFeeAmount,
-          paidAmount: 0.0,
-          dueDate: DateTime.now(),
-          status: FeeStatus.pending,
-          type: 'Admission',
-        ), currentUser);
-
-        // 2. Create First Month's Fee
-        await ref.read(feeServiceProvider).addFee(FeeModel(
-          id: const Uuid().v4(),
-          studentId: studentId,
-          amount: monthlyFeeAmount,
-          paidAmount: 0.0,
-          dueDate: DateTime.now(),
-          status: FeeStatus.pending,
-          type: 'Monthly',
-        ), currentUser);
+        await Future.wait([
+          ref.read(feeServiceProvider).addFee(FeeModel(
+            id: const Uuid().v4(),
+            studentId: studentId,
+            amount: admissionFeeAmount,
+            paidAmount: 0.0,
+            dueDate: DateTime.now(),
+            status: FeeStatus.pending,
+            type: 'Admission',
+          ), currentUser),
+          ref.read(feeServiceProvider).addFee(FeeModel(
+            id: const Uuid().v4(),
+            studentId: studentId,
+            amount: monthlyFeeAmount,
+            paidAmount: 0.0,
+            dueDate: DateTime.now(),
+            status: FeeStatus.pending,
+            type: 'Monthly',
+          ), currentUser),
+        ]);
       }
       
-      if (mounted) {
-        Navigator.pop(context);
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(isEditing ? 'Student updated successfully' : 'Student enrolled successfully')),
-        );
-      }
+      navigator.pop();
+      scaffoldMessenger.showSnackBar(
+        SnackBar(content: Text(isEditing ? 'Student updated successfully' : 'Student enrolled successfully')),
+      );
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
+        setState(() => _isLoading = false);
+        scaffoldMessenger.showSnackBar(
           SnackBar(content: Text('Error: $e')),
         );
       }
-    } finally {
-      if (mounted) setState(() => _isLoading = false);
     }
+    // No finally block to avoid calling setState on a potentially popped/disposed widget
   }
 
   @override
@@ -287,7 +289,7 @@ class _AddStudentScreenState extends ConsumerState<AddStudentScreen> {
                   SizedBox(
                     height: 56,
                     child: ElevatedButton(
-                      onPressed: _saveStudent,
+                      onPressed: _isLoading ? null : _saveStudent,
                       style: ElevatedButton.styleFrom(
                         backgroundColor: Colors.blue.shade700,
                         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
