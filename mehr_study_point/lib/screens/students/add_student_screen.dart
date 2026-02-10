@@ -71,7 +71,6 @@ class _AddStudentScreenState extends ConsumerState<AddStudentScreen> {
 
     setState(() => _isLoading = true);
     
-    // Store references to Navigator and ScaffoldMessenger before async gaps
     final navigator = Navigator.of(context);
     final scaffoldMessenger = ScaffoldMessenger.of(context);
 
@@ -100,10 +99,8 @@ class _AddStudentScreenState extends ConsumerState<AddStudentScreen> {
           oldValues: widget.student!.toMap(),
         );
       } else {
-        // First add the student (which also updates the seat)
         await ref.read(studentServiceProvider).addStudent(updatedStudent, currentUser);
         
-        // Use Future.wait to run fee additions in parallel for speed
         final admissionFeeAmount = double.tryParse(_admissionFeeController.text) ?? 1000.0;
         await Future.wait([
           ref.read(feeServiceProvider).addFee(FeeModel(
@@ -129,13 +126,16 @@ class _AddStudentScreenState extends ConsumerState<AddStudentScreen> {
       
       navigator.pop();
       scaffoldMessenger.showSnackBar(
-        SnackBar(content: Text(isEditing ? 'Student updated successfully' : 'Student enrolled successfully')),
+        SnackBar(
+          content: Text(isEditing ? 'Student updated successfully' : 'Student enrolled successfully'),
+          behavior: SnackBarBehavior.floating,
+        ),
       );
     } catch (e) {
       if (mounted) {
         setState(() => _isLoading = false);
         scaffoldMessenger.showSnackBar(
-          SnackBar(content: Text('Error: $e')),
+          SnackBar(content: Text('Error: $e'), behavior: SnackBarBehavior.floating),
         );
       }
     }
@@ -143,7 +143,6 @@ class _AddStudentScreenState extends ConsumerState<AddStudentScreen> {
 
   @override
   Widget build(BuildContext context) {
-    // Listen for changes in the seat provider to prevent state mismatch
     ref.listen<AsyncValue<List<SeatModel>>>(seatsStreamProvider, (_, next) {
       final seats = next.value ?? [];
       final availableSeatIds = seats.where((s) => s.status == SeatStatus.available).map((s) => s.id).toSet();
@@ -159,14 +158,11 @@ class _AddStudentScreenState extends ConsumerState<AddStudentScreen> {
     final isEditing = widget.student != null;
     final seatsAsync = ref.watch(seatsStreamProvider);
     
-    // Get and sort available seats
     final List<SeatModel> availableSeats = (seatsAsync.value ?? [])
         .where((s) => s.status == SeatStatus.available)
         .toList();
     
-    // Sort seats by seat number ascending
     availableSeats.sort((a, b) {
-      // Try parsing to int for proper numerical sorting (e.g., 2 comes before 10)
       final aNum = int.tryParse(a.seatNumber);
       final bNum = int.tryParse(b.seatNumber);
       if (aNum != null && bNum != null) {
@@ -175,147 +171,213 @@ class _AddStudentScreenState extends ConsumerState<AddStudentScreen> {
       return a.seatNumber.compareTo(b.seatNumber);
     });
 
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+
     return Scaffold(
-      backgroundColor: Theme.of(context).brightness == Brightness.light ? Colors.grey[50] : null,
       appBar: AppBar(
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios_new, size: 20),
+          icon: const Icon(Icons.close),
           onPressed: () => Navigator.of(context).pop(),
         ),
-        title: Text(isEditing ? 'Edit Student' : 'Enroll New Student', 
-          style: const TextStyle(fontWeight: FontWeight.bold)),
-        centerTitle: true,
-        elevation: 0,
-        backgroundColor: Colors.transparent,
+        title: Text(isEditing ? 'Edit Profile' : 'New Enrollment'),
+        actions: [
+          if (!_isLoading)
+            TextButton(
+              onPressed: _saveStudent,
+              child: Text(
+                'SAVE',
+                style: TextStyle(
+                  color: colorScheme.primary,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ),
+        ],
       ),
       body: _isLoading 
         ? const Center(child: CircularProgressIndicator())
         : SingleChildScrollView(
-            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+            padding: const EdgeInsets.all(24),
             child: Form(
               key: _formKey,
               child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  _buildSectionTitle('PERSONAL DETAILS'),
-                  _buildCard([
-                    _buildTextField(
-                      controller: _nameController,
-                      label: 'Full Name',
-                      icon: Icons.person_outline,
-                      validator: (v) => v?.isEmpty ?? true ? 'Required' : null,
-                    ),
-                    _buildTextField(
-                      controller: _contactController,
-                      label: 'Contact Number',
-                      icon: Icons.phone_android_outlined,
-                      keyboardType: TextInputType.phone,
-                      validator: (v) => v?.isEmpty ?? true ? 'Required' : null,
-                    ),
-                    _buildTextField(
-                      controller: _addressController,
-                      label: 'Address',
-                      icon: Icons.location_on_outlined,
-                      maxLines: 2,
-                      validator: (v) => v?.isEmpty ?? true ? 'Required' : null,
-                    ),
-                  ]),
-
-                  const SizedBox(height: 24),
-                  _buildSectionTitle('FEE CONFIGURATION'),
-                  _buildCard([
-                    _buildTextField(
-                      controller: _monthlyFeeController,
-                      label: 'Monthly Fee Rate',
-                      icon: Icons.payments_outlined,
-                      prefixText: 'Rs. ',
-                      keyboardType: TextInputType.number,
-                      validator: (v) => v?.isEmpty ?? true ? 'Required' : null,
-                    ),
-                    if (!isEditing)
-                      _buildTextField(
-                        controller: _admissionFeeController,
-                        label: 'Admission Fee (One-time)',
-                        icon: Icons.receipt_long_outlined,
-                        prefixText: 'Rs. ',
-                        keyboardType: TextInputType.number,
-                      ),
-                  ]),
-
-                  const SizedBox(height: 24),
-                  _buildSectionTitle('GUARDIAN INFORMATION'),
-                  _buildCard([
-                    _buildTextField(
-                      controller: _guardianNameController,
-                      label: 'Guardian Name',
-                      icon: Icons.people_outline,
-                    ),
-                    _buildTextField(
-                      controller: _guardianContactController,
-                      label: 'Guardian Contact',
-                      icon: Icons.phone_android_outlined,
-                      keyboardType: TextInputType.phone,
-                    ),
-                  ]),
-
-                  const SizedBox(height: 24),
-                  _buildSectionTitle('SEAT ASSIGNMENT'),
-                  if (!isEditing)
-                    _buildCard([
-                      Padding(
-                        padding: const EdgeInsets.all(16.0),
-                        child: DropdownButtonFormField<SeatModel>(
-                          decoration: InputDecoration(
-                            labelText: 'Select an available seat',
-                            prefixIcon: const Icon(Icons.event_seat_outlined, color: Colors.blue),
-                            border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-                            enabledBorder: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(12),
-                              borderSide: BorderSide(color: Colors.grey.shade300),
+                  Center(
+                    child: Stack(
+                      children: [
+                        CircleAvatar(
+                          radius: 50,
+                          backgroundColor: colorScheme.primary.withOpacity(0.1),
+                          child: Icon(Icons.person, size: 50, color: colorScheme.primary),
+                        ),
+                        if (!isEditing)
+                          Positioned(
+                            bottom: 0,
+                            right: 0,
+                            child: CircleAvatar(
+                              radius: 18,
+                              backgroundColor: colorScheme.primary,
+                              child: const Icon(Icons.add_a_photo, size: 18, color: Colors.white),
                             ),
                           ),
-                          value: _selectedSeat,
-                          items: availableSeats.map((seat) {
-                            return DropdownMenuItem(
-                              value: seat,
-                              child: Text('Seat ${seat.seatNumber}'),
-                            );
-                          }).toList(),
-                          onChanged: (value) => setState(() => _selectedSeat = value),
-                          validator: (value) => value == null ? 'Required' : null,
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 32),
+                  
+                  _buildSectionTitle(context, 'Basic Information', Icons.info_outline),
+                  _buildTextField(
+                    context: context,
+                    controller: _nameController,
+                    label: 'Full Name',
+                    hint: 'Enter student\'s full name',
+                    icon: Icons.person_outline,
+                    validator: (v) => v?.isEmpty ?? true ? 'Name is required' : null,
+                  ),
+                  const SizedBox(height: 16),
+                  _buildTextField(
+                    context: context,
+                    controller: _contactController,
+                    label: 'Contact Number',
+                    hint: '03xx xxxxxxx',
+                    icon: Icons.phone_android_outlined,
+                    keyboardType: TextInputType.phone,
+                    validator: (v) => v?.isEmpty ?? true ? 'Contact is required' : null,
+                  ),
+                  const SizedBox(height: 16),
+                  _buildTextField(
+                    context: context,
+                    controller: _addressController,
+                    label: 'Address',
+                    hint: 'Current living address',
+                    icon: Icons.location_on_outlined,
+                    maxLines: 2,
+                    validator: (v) => v?.isEmpty ?? true ? 'Address is required' : null,
+                  ),
+                  
+                  const SizedBox(height: 32),
+                  _buildSectionTitle(context, 'Fee Details', Icons.payments_outlined),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: _buildTextField(
+                          context: context,
+                          controller: _monthlyFeeController,
+                          label: 'Monthly Fee',
+                          prefixText: 'Rs. ',
+                          keyboardType: TextInputType.number,
+                          validator: (v) => v?.isEmpty ?? true ? 'Required' : null,
                         ),
                       ),
-                    ])
+                      if (!isEditing) ...[
+                        const SizedBox(width: 16),
+                        Expanded(
+                          child: _buildTextField(
+                            context: context,
+                            controller: _admissionFeeController,
+                            label: 'Admission',
+                            prefixText: 'Rs. ',
+                            keyboardType: TextInputType.number,
+                          ),
+                        ),
+                      ],
+                    ],
+                  ),
+                  
+                  const SizedBox(height: 32),
+                  _buildSectionTitle(context, 'Emergency Contact', Icons.emergency_outlined),
+                  _buildTextField(
+                    context: context,
+                    controller: _guardianNameController,
+                    label: 'Guardian Name',
+                    hint: 'Father / Guardian name',
+                    icon: Icons.people_outline,
+                  ),
+                  const SizedBox(height: 16),
+                  _buildTextField(
+                    context: context,
+                    controller: _guardianContactController,
+                    label: 'Guardian Contact',
+                    hint: 'Emergency phone number',
+                    icon: Icons.contact_phone_outlined,
+                    keyboardType: TextInputType.phone,
+                  ),
+                  
+                  const SizedBox(height: 32),
+                  _buildSectionTitle(context, 'Seat Assignment', Icons.event_seat_outlined),
+                  if (!isEditing)
+                    DropdownButtonFormField<SeatModel>(
+                      decoration: InputDecoration(
+                        filled: true,
+                        fillColor: colorScheme.surfaceVariant.withOpacity(0.3),
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                          borderSide: BorderSide.none,
+                        ),
+                        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+                        prefixIcon: const Icon(Icons.chair_alt_outlined),
+                      ),
+                      hint: const Text('Choose a seat'),
+                      value: _selectedSeat,
+                      items: availableSeats.map((seat) {
+                        return DropdownMenuItem(
+                          value: seat,
+                          child: Text('Seat ${seat.seatNumber}'),
+                        );
+                      }).toList(),
+                      onChanged: (value) => setState(() => _selectedSeat = value),
+                      validator: (value) => value == null ? 'Please select a seat' : null,
+                    )
                   else
-                    _buildCard([
-                      ListTile(
-                        leading: Container(
-                          padding: const EdgeInsets.all(8),
-                          decoration: BoxDecoration(color: Colors.blue.shade50, borderRadius: BorderRadius.circular(8)),
-                          child: const Icon(Icons.event_seat, color: Colors.blue),
-                        ),
-                        title: const Text('Currently Occupying', style: TextStyle(fontWeight: FontWeight.w600)),
-                        subtitle: Text('Seat Number: ${widget.student?.assignedSeatNumber ?? 'None'}'),
+                    Container(
+                      padding: const EdgeInsets.all(16),
+                      decoration: BoxDecoration(
+                        color: colorScheme.primaryContainer.withOpacity(0.3),
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(color: colorScheme.primary.withOpacity(0.2)),
                       ),
-                    ]),
-
-                  const SizedBox(height: 40),
+                      child: Row(
+                        children: [
+                          Icon(Icons.event_seat, color: colorScheme.primary),
+                          const SizedBox(width: 16),
+                          Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                'Currently Assigned',
+                                style: theme.textTheme.labelSmall?.copyWith(color: colorScheme.primary),
+                              ),
+                              Text(
+                                'Seat Number: ${widget.student?.assignedSeatNumber ?? 'None'}',
+                                style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
+                    ),
+                  
+                  const SizedBox(height: 48),
                   SizedBox(
+                    width: double.infinity,
                     height: 56,
                     child: ElevatedButton(
                       onPressed: _isLoading ? null : _saveStudent,
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.blue.shade700,
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                        backgroundColor: colorScheme.primary,
+                        foregroundColor: colorScheme.onPrimary,
                         elevation: 0,
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
                       ),
                       child: Text(
-                        isEditing ? 'UPDATE STUDENT DETAILS' : 'ENROLL NEW STUDENT',
-                        style: const TextStyle(fontWeight: FontWeight.bold, letterSpacing: 1.1, color: Colors.white),
+                        isEditing ? 'UPDATE PROFILE' : 'ENROLL STUDENT',
+                        style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
                       ),
                     ),
                   ),
-                  const SizedBox(height: 40),
+                  const SizedBox(height: 24),
                 ],
               ),
             ),
@@ -323,49 +385,68 @@ class _AddStudentScreenState extends ConsumerState<AddStudentScreen> {
     );
   }
 
-  Widget _buildSectionTitle(String title) {
+  Widget _buildSectionTitle(BuildContext context, String title, IconData icon) {
+    final colorScheme = Theme.of(context).colorScheme;
     return Padding(
-      padding: const EdgeInsets.only(left: 4, bottom: 8),
-      child: Text(
-        title,
-        style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.grey.shade600, letterSpacing: 1.1),
+      padding: const EdgeInsets.only(bottom: 16),
+      child: Row(
+        children: [
+          Icon(icon, size: 20, color: colorScheme.primary),
+          const SizedBox(width: 12),
+          Text(
+            title,
+            style: Theme.of(context).textTheme.titleMedium?.copyWith(
+              fontWeight: FontWeight.bold,
+              color: colorScheme.onSurface.withOpacity(0.8),
+            ),
+          ),
+        ],
       ),
     );
   }
 
-  Widget _buildCard(List<Widget> children) {
-    return Card(
-      elevation: 0,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-      child: Column(children: children),
-    );
-  }
-
   Widget _buildTextField({
+    required BuildContext context,
     required TextEditingController controller,
     required String label,
-    required IconData icon,
+    String? hint,
+    IconData? icon,
     TextInputType? keyboardType,
     String? prefixText,
     int maxLines = 1,
     String? Function(String?)? validator,
   }) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-      child: TextFormField(
-        controller: controller,
-        keyboardType: keyboardType,
-        maxLines: maxLines,
-        validator: validator,
-        decoration: InputDecoration(
-          labelText: label,
-          prefixIcon: Icon(icon, color: Colors.blueGrey.shade400, size: 22),
-          prefixText: prefixText,
-          border: UnderlineInputBorder(borderSide: BorderSide(color: Colors.grey.shade200)),
-          enabledBorder: UnderlineInputBorder(borderSide: BorderSide(color: Colors.grey.shade200)),
-          focusedBorder: UnderlineInputBorder(borderSide: BorderSide(color: Colors.blue.shade700)),
-          contentPadding: const EdgeInsets.symmetric(vertical: 16),
+    final colorScheme = Theme.of(context).colorScheme;
+    
+    return TextFormField(
+      controller: controller,
+      keyboardType: keyboardType,
+      maxLines: maxLines,
+      validator: validator,
+      decoration: InputDecoration(
+        labelText: label,
+        hintText: hint,
+        prefixIcon: icon != null ? Icon(icon, size: 22) : null,
+        prefixText: prefixText,
+        filled: true,
+        fillColor: colorScheme.surfaceVariant.withOpacity(0.3),
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: BorderSide.none,
         ),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: BorderSide.none,
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: BorderSide(color: colorScheme.primary, width: 1.5),
+        ),
+        errorBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: BorderSide(color: colorScheme.error, width: 1),
+        ),
+        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
       ),
     );
   }
