@@ -1,4 +1,3 @@
-
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
@@ -99,10 +98,19 @@ class StudentDetailsScreen extends ConsumerWidget {
               _DetailTile(
                 icon: Icons.event_seat_outlined,
                 label: 'Assigned Seat',
-                value: 'Seat ${student.assignedSeatNumber ?? 'N/A'}',
-                trailing: !isArchived ? TextButton(
-                  onPressed: () => _showSwapDialog(context, ref, currentUser),
-                  child: const Text('SWAP', style: TextStyle(fontWeight: FontWeight.bold)),
+                value: student.assignedSeatId != null ? 'Seat ${student.assignedSeatNumber}' : 'No Seat Assigned',
+                trailing: !isArchived && student.assignedSeatId != null ? Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    TextButton(
+                      onPressed: () => _showSwapDialog(context, ref, currentUser),
+                      child: const Text('SWAP', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12)),
+                    ),
+                    TextButton(
+                      onPressed: () => _confirmUnassignSeat(context, ref, currentUser),
+                      child: const Text('REMOVE', style: TextStyle(color: Colors.red, fontWeight: FontWeight.bold, fontSize: 12)),
+                    ),
+                  ],
                 ) : null,
               ),
             ]),
@@ -343,6 +351,32 @@ class StudentDetailsScreen extends ConsumerWidget {
     );
   }
 
+  void _confirmUnassignSeat(BuildContext context, WidgetRef ref, dynamic currentUser) async {
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: const Text('Unassign Seat?'),
+        content: Text('Are you sure you want to remove Seat ${student.assignedSeatNumber} from ${student.fullName}?'),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Cancel')),
+          TextButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('Remove', style: TextStyle(color: Colors.red, fontWeight: FontWeight.bold)),
+          ),
+        ],
+      ),
+    );
+
+    if (confirm == true && currentUser != null) {
+      await ref.read(studentServiceProvider).unassignSeat(student, currentUser);
+      if (context.mounted) {
+        Navigator.pop(context); // Go back to student list to refresh
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Seat unassigned successfully')));
+      }
+    }
+  }
+
   void _confirmDelete(BuildContext context, WidgetRef ref, dynamic currentUser) async {
     final confirm = await showDialog<bool>(
       context: context,
@@ -479,18 +513,30 @@ class _StatusChip extends StatelessWidget {
   Widget build(BuildContext context) {
     Color color;
     switch (status) {
-      case FeeStatus.paid: color = Colors.green; break;
-      case FeeStatus.pending: color = Colors.orange; break;
-      case FeeStatus.overdue: color = Colors.red; break;
-      case FeeStatus.partial: color = Colors.blue; break;
+      case FeeStatus.paid:
+        color = Colors.green;
+        break;
+      case FeeStatus.pending:
+        color = Colors.orange;
+        break;
+      case FeeStatus.overdue:
+        color = Colors.red;
+        break;
+      case FeeStatus.partial:
+        color = Colors.blue;
+        break;
     }
 
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-      decoration: BoxDecoration(color: color.withOpacity(0.1), borderRadius: BorderRadius.circular(4)),
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+      decoration: BoxDecoration(
+        color: color.withOpacity(0.1),
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: color.withOpacity(0.5)),
+      ),
       child: Text(
         status.name.toUpperCase(),
-        style: TextStyle(color: color, fontSize: 8, fontWeight: FontWeight.bold, letterSpacing: 0.5),
+        style: TextStyle(color: color, fontSize: 9, fontWeight: FontWeight.bold),
       ),
     );
   }

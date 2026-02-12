@@ -139,6 +139,38 @@ class StudentService {
     ));
   }
 
+  Future<void> unassignSeat(StudentModel student, UserModel currentUser) async {
+    if (student.assignedSeatId == null) return;
+
+    final batch = _firestore.batch();
+
+    // 1. Update Student
+    batch.update(_firestore.collection('students').doc(student.id), {
+      'assignedSeatId': null,
+      'assignedSeatNumber': null,
+    });
+
+    // 2. Free the Seat
+    batch.update(_firestore.collection('seats').doc(student.assignedSeatId!), {
+      'status': SeatStatus.available.name,
+      'studentId': null,
+    });
+
+    await batch.commit();
+
+    await _auditService.logAction(AuditLogModel(
+      id: '',
+      userId: currentUser.id,
+      userName: currentUser.name,
+      action: 'UPDATE',
+      entityType: 'Student',
+      entityId: student.id,
+      oldValues: {'seat': student.assignedSeatNumber},
+      newValues: {'seat': null},
+      timestamp: DateTime.now(),
+    ));
+  }
+
   Future<void> deleteStudent(String studentId, UserModel currentUser, {String? seatId}) async {
     final batch = _firestore.batch();
     
