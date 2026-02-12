@@ -10,6 +10,7 @@ import '../../providers/theme_provider.dart';
 import '../../providers/settings_provider.dart';
 import '../../models/user_model.dart';
 import 'audit_logs_screen.dart';
+import 'about_screen.dart';
 
 class SettingsScreen extends ConsumerStatefulWidget {
   const SettingsScreen({super.key});
@@ -154,6 +155,16 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                       iconColor: Colors.grey.shade700,
                       iconBgColor: Colors.grey.shade100,
                       title: 'Privacy Policy',
+                    ),
+                    _SettingsTile(
+                      icon: Icons.info_outline_rounded,
+                      iconColor: Colors.grey.shade700,
+                      iconBgColor: Colors.grey.shade100,
+                      title: 'About & Credits',
+                      onTap: () => Navigator.push(
+                        context, 
+                        MaterialPageRoute(builder: (context) => const AboutScreen())
+                      ),
                     ),
                     _SettingsTile(
                       icon: Icons.sync_rounded,
