@@ -174,8 +174,10 @@ class StudentService {
   Future<void> deleteStudent(String studentId, UserModel currentUser, {String? seatId}) async {
     final batch = _firestore.batch();
     
+    // 1. Delete Student Record
     batch.delete(_firestore.collection('students').doc(studentId));
     
+    // 2. Free the Seat if assigned
     if (seatId != null) {
       batch.update(_firestore.collection('seats').doc(seatId), {
         'status': SeatStatus.available.name,
@@ -183,6 +185,17 @@ class StudentService {
       });
     }
 
+    // 3. Delete all Fees associated with this student
+    final studentFees = await _firestore
+        .collection('fees')
+        .where('studentId', isEqualTo: studentId)
+        .get();
+    
+    for (var doc in studentFees.docs) {
+      batch.delete(doc.reference);
+    }
+
+    // Commit all deletions
     await batch.commit();
 
     await _auditService.logAction(AuditLogModel(

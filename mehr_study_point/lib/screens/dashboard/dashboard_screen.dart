@@ -12,6 +12,7 @@ import '../../providers/service_providers.dart';
 import '../../models/user_model.dart';
 import '../../models/fee_model.dart';
 import '../students/add_student_screen.dart';
+import '../students/student_list_screen.dart';
 import '../fees/fee_management_screen.dart';
 import '../reports/reports_screen.dart';
 import '../settings/settings_screen.dart';
@@ -284,7 +285,7 @@ class DashboardScreen extends ConsumerWidget {
               style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
             ),
             TextButton(
-              onPressed: () {},
+              onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (context) => const StudentListScreen())),
               child: Text('View All', style: TextStyle(color: colorScheme.primary)),
             ),
           ],
