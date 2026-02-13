@@ -133,7 +133,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                       icon: Icons.file_download_outlined,
                       iconColor: Colors.blue.shade700,
                       iconBgColor: Colors.blue.shade50,
-                      title: 'Export Data (CSV)',
+                      title: 'Export Data (PDF)',
                       onTap: () => _showExportOptions(context),
                     ),
                   ],
@@ -521,7 +521,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
         children: [
           ListTile(
             leading: const Icon(Icons.people_alt_outlined),
-            title: const Text('Export Students (CSV)'),
+            title: const Text('Export Students (PDF)'),
             onTap: () {
               Navigator.pop(context);
               ref.read(exportServiceProvider).exportStudents(context);
@@ -529,7 +529,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
           ),
           ListTile(
             leading: const Icon(Icons.receipt_long_outlined),
-            title: const Text('Export Fees (CSV)'),
+            title: const Text('Export Fees (PDF)'),
             onTap: () {
               Navigator.pop(context);
               ref.read(exportServiceProvider).exportFees(context);
