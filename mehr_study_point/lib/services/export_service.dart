@@ -1,10 +1,12 @@
 
 import 'dart:io';
-import 'package:csv/csv.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:share_plus/share_plus.dart';
+import 'package:pdf/pdf.dart';
+import 'package:pdf/widgets.dart' as pw;
+import 'package:printing/printing.dart';
 import '../providers/student_provider.dart';
 import '../providers/fee_provider.dart';
 import 'package:intl/intl.dart';
@@ -16,55 +18,88 @@ class ExportService {
 
   Future<void> exportStudents(BuildContext context) async {
     final students = ref.read(studentsStreamProvider).value ?? [];
-    
-    List<List<dynamic>> rows = [];
-    rows.add(["ID", "Name", "Contact", "Guardian", "Seat", "Status", "Monthly Fee", "Admission Date"]);
+    final pdf = pw.Document();
 
-    for (var s in students) {
-      rows.add([
-        s.id,
-        s.fullName,
-        s.contactNumber,
-        s.guardianName ?? "N/A",
-        s.assignedSeatNumber ?? "N/A",
-        s.status,
-        s.monthlyFee,
-        DateFormat('yyyy-MM-dd').format(s.admissionDate),
-      ]);
-    }
+    pdf.addPage(
+      pw.MultiPage(
+        pageFormat: PdfPageFormat.a4,
+        margin: const pw.EdgeInsets.all(32),
+        build: (pw.Context context) {
+          return [
+            pw.Header(
+              level: 0,
+              child: pw.Text("Mehr Study Point - Student Directory",
+                  style: pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: 18)),
+            ),
+            pw.SizedBox(height: 10),
+            pw.TableHelper.fromTextArray(
+              headers: ["Name", "Contact", "Guardian", "Seat", "Status", "Admission"],
+              data: students.map((s) => [
+                s.fullName,
+                s.contactNumber,
+                s.guardianName ?? "N/A",
+                s.assignedSeatNumber ?? "N/A",
+                s.status,
+                DateFormat('dd-MM-yy').format(s.admissionDate),
+              ]).toList(),
+              headerStyle: pw.TextStyle(fontWeight: pw.FontWeight.bold),
+              cellAlignment: pw.Alignment.centerLeft,
+            ),
+          ];
+        },
+      ),
+    );
 
-    await _saveAndShare(rows, "Student_Directory", context);
+    await _saveAndShare(pdf, "Student_Directory", context);
   }
 
   Future<void> exportFees(BuildContext context) async {
     final fees = ref.read(feesStreamProvider).value ?? [];
     final students = ref.read(studentsStreamProvider).value ?? [];
-    
-    List<List<dynamic>> rows = [];
-    rows.add(["Student Name", "Type", "Amount", "Paid", "Status", "Due Date", "Payment Method"]);
+    final pdf = pw.Document();
 
-    for (var f in fees) {
-      final student = students.firstWhere((s) => s.id == f.studentId, orElse: () => students.first);
-      rows.add([
-        student.fullName,
-        f.type,
-        f.amount,
-        f.paidAmount,
-        f.status.name,
-        DateFormat('yyyy-MM-dd').format(f.dueDate),
-        f.paymentMethod ?? "N/A",
-      ]);
-    }
+    pdf.addPage(
+      pw.MultiPage(
+        pageFormat: PdfPageFormat.a4,
+        margin: const pw.EdgeInsets.all(32),
+        build: (pw.Context context) {
+          return [
+            pw.Header(
+              level: 0,
+              child: pw.Text("Mehr Study Point - Fee Ledger",
+                  style: pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: 18)),
+            ),
+            pw.SizedBox(height: 10),
+            pw.TableHelper.fromTextArray(
+              headers: ["Student Name", "Type", "Amount", "Paid", "Status", "Due Date"],
+              data: fees.map((f) {
+                final student = students.firstWhere((s) => s.id == f.studentId, orElse: () => students.first);
+                return [
+                  student.fullName,
+                  f.type,
+                  f.amount.toInt().toString(),
+                  f.paidAmount.toInt().toString(),
+                  f.status.name.toUpperCase(),
+                  DateFormat('dd-MM-yy').format(f.dueDate),
+                ];
+              }).toList(),
+              headerStyle: pw.TextStyle(fontWeight: pw.FontWeight.bold),
+              cellAlignment: pw.Alignment.centerLeft,
+            ),
+          ];
+        },
+      ),
+    );
 
-    await _saveAndShare(rows, "Fee_Ledger", context);
+    await _saveAndShare(pdf, "Fee_Ledger", context);
   }
 
-  Future<void> _saveAndShare(List<List<dynamic>> rows, String fileName, BuildContext context) async {
-    String csvData = const ListToCsvConverter().convert(rows);
+  Future<void> _saveAndShare(pw.Document pdf, String fileName, BuildContext context) async {
+    final bytes = await pdf.save();
     final directory = await getApplicationDocumentsDirectory();
-    final pathOfTheFileToWrite = "${directory.path}/$fileName.csv";
+    final pathOfTheFileToWrite = "${directory.path}/$fileName.pdf";
     File file = File(pathOfTheFileToWrite);
-    await file.writeAsString(csvData);
+    await file.writeAsBytes(bytes);
     
     await Share.shareXFiles([XFile(pathOfTheFileToWrite)], text: '$fileName Export');
   }
