@@ -8,12 +8,18 @@ class FeeListItem extends StatelessWidget {
   final FeeModel fee;
   final String studentName;
   final VoidCallback onTap;
+  final VoidCallback? onLongPress;
+  final bool isSelected;
+  final bool isSelectionMode;
 
   const FeeListItem({
     super.key,
     required this.fee,
     required this.studentName,
     required this.onTap,
+    this.onLongPress,
+    this.isSelected = false,
+    this.isSelectionMode = false,
   });
 
   @override
@@ -52,20 +58,32 @@ class FeeListItem extends StatelessWidget {
     }
 
     return Card(
-      elevation: 0,
+      elevation: isSelected ? 4 : 0,
       margin: const EdgeInsets.only(bottom: 12),
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(16),
+        side: isSelected 
+          ? BorderSide(color: Theme.of(context).colorScheme.primary, width: 2)
+          : BorderSide.none,
+      ),
       child: ListTile(
         onTap: onTap,
+        onLongPress: onLongPress,
         contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-        leading: Container(
-          padding: const EdgeInsets.all(8),
-          decoration: BoxDecoration(
-            color: iconBgColor,
-            borderRadius: BorderRadius.circular(10),
-          ),
-          child: Icon(statusIcon, color: statusColor, size: 22),
-        ),
+        leading: isSelectionMode 
+          ? Checkbox(
+              value: isSelected,
+              onChanged: (_) => onTap(),
+              shape: const CircleBorder(),
+            )
+          : Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: iconBgColor,
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: Icon(statusIcon, color: statusColor, size: 22),
+            ),
         title: Text(
           studentName,
           style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 15),

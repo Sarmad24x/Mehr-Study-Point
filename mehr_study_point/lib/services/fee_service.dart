@@ -128,4 +128,39 @@ class FeeService {
       timestamp: DateTime.now(),
     ));
   }
+
+  Future<void> deleteFee(String feeId, UserModel currentUser) async {
+    await _firestore.collection('fees').doc(feeId).delete();
+
+    await _auditService.logAction(AuditLogModel(
+      id: '',
+      userId: currentUser.id,
+      userName: currentUser.name,
+      action: 'DELETE',
+      entityType: 'Fee',
+      entityId: feeId,
+      timestamp: DateTime.now(),
+    ));
+  }
+
+  Future<int> deleteMultipleFees(List<String> feeIds, UserModel currentUser) async {
+    final batch = _firestore.batch();
+    for (var id in feeIds) {
+      batch.delete(_firestore.collection('fees').doc(id));
+    }
+    await batch.commit();
+
+    await _auditService.logAction(AuditLogModel(
+      id: '',
+      userId: currentUser.id,
+      userName: currentUser.name,
+      action: 'BULK_DELETE',
+      entityType: 'Fee',
+      entityId: 'multiple',
+      newValues: {'count': feeIds.length},
+      timestamp: DateTime.now(),
+    ));
+    
+    return feeIds.length;
+  }
 }

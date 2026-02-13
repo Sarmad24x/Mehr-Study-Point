@@ -10,6 +10,9 @@ import 'widgets/stat_card.dart';
 import 'widgets/fee_list_item.dart';
 import 'widgets/record_payment_bottom_sheet.dart';
 
+final selectedFeesProvider = StateProvider<Set<String>>((ref) => {});
+final isSelectionModeProvider = StateProvider<bool>((ref) => false);
+
 class FeeManagementScreen extends ConsumerWidget {
   const FeeManagementScreen({super.key});
 
@@ -18,96 +21,174 @@ class FeeManagementScreen extends ConsumerWidget {
     final feesAsync = ref.watch(feesStreamProvider);
     final filteredFees = ref.watch(filteredFeesProvider);
     final studentsAsync = ref.watch(studentsStreamProvider);
+    final selectedFees = ref.watch(selectedFeesProvider);
+    final isSelectionMode = ref.watch(isSelectionModeProvider);
     final canPop = ModalRoute.of(context)?.canPop ?? false;
 
-    return Scaffold(
-      backgroundColor: Theme.of(context).brightness == Brightness.light
-          ? Colors.grey[50]
-          : null,
-      appBar: AppBar(
-        leading: canPop
-            ? IconButton(
-                icon: const Icon(Icons.arrow_back_ios_new, size: 20),
-                onPressed: () => Navigator.of(context).pop(),
-              )
+    return WillPopScope(
+      onWillPop: () async {
+        if (isSelectionMode) {
+          ref.read(isSelectionModeProvider.notifier).state = false;
+          ref.read(selectedFeesProvider.notifier).state = {};
+          return false;
+        }
+        return true;
+      },
+      child: Scaffold(
+        backgroundColor: Theme.of(context).brightness == Brightness.light
+            ? Colors.grey[50]
             : null,
-        title: const Text('Fee Management',
-            style: TextStyle(fontWeight: FontWeight.bold)),
-        centerTitle: true,
-        elevation: 0,
-        backgroundColor: Colors.transparent,
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.playlist_add, color: Colors.blue),
-            tooltip: 'Generate Monthly Fees',
-            onPressed: () => _showBulkGenerateDialog(context, ref),
+        appBar: AppBar(
+          leading: isSelectionMode
+              ? IconButton(
+                  icon: const Icon(Icons.close),
+                  onPressed: () {
+                    ref.read(isSelectionModeProvider.notifier).state = false;
+                    ref.read(selectedFeesProvider.notifier).state = {};
+                  },
+                )
+              : (canPop
+                  ? IconButton(
+                      icon: const Icon(Icons.arrow_back_ios_new, size: 20),
+                      onPressed: () => Navigator.of(context).pop(),
+                    )
+                  : null),
+          title: Text(
+            isSelectionMode ? '${selectedFees.length} Selected' : 'Fee Management',
+            style: const TextStyle(fontWeight: FontWeight.bold),
           ),
-        ],
-      ),
-      body: Column(
-        children: [
-          // Search Bar
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 20.0, vertical: 8.0),
-            child: TextField(
-              onChanged: (value) =>
-                  ref.read(feeSearchQueryProvider.notifier).state = value,
-              decoration: InputDecoration(
-                hintText: 'Search by Status or Student...',
-                prefixIcon: const Icon(Icons.search, color: Colors.blue, size: 20),
-                filled: true,
-                fillColor: Theme.of(context).brightness == Brightness.light
-                    ? Colors.white
-                    : Colors.grey[900],
-                contentPadding: const EdgeInsets.symmetric(vertical: 0),
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
-                  borderSide: BorderSide.none,
+          centerTitle: true,
+          elevation: 0,
+          backgroundColor: Colors.transparent,
+          actions: [
+            if (isSelectionMode) ...[
+              IconButton(
+                icon: Icon(
+                  selectedFees.length == filteredFees.length && filteredFees.isNotEmpty
+                      ? Icons.deselect_rounded
+                      : Icons.select_all_rounded,
                 ),
-                enabledBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
-                  borderSide: BorderSide.none,
+                tooltip: 'Select All',
+                onPressed: () {
+                  if (selectedFees.length == filteredFees.length) {
+                    ref.read(selectedFeesProvider.notifier).state = {};
+                  } else {
+                    ref.read(selectedFeesProvider.notifier).state =
+                        filteredFees.map((f) => f.id).toSet();
+                  }
+                },
+              ),
+              IconButton(
+                icon: const Icon(Icons.delete, color: Colors.red),
+                onPressed: selectedFees.isEmpty
+                    ? null
+                    : () => _showBulkDeleteConfirmation(context, ref, selectedFees),
+              ),
+            ] else
+              IconButton(
+                icon: const Icon(Icons.playlist_add, color: Colors.blue),
+                tooltip: 'Generate Monthly Fees',
+                onPressed: () => _showBulkGenerateDialog(context, ref),
+              ),
+          ],
+        ),
+        body: Column(
+          children: [
+            // Search Bar
+            if (!isSelectionMode)
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 20.0, vertical: 8.0),
+                child: TextField(
+                  onChanged: (value) =>
+                      ref.read(feeSearchQueryProvider.notifier).state = value,
+                  decoration: InputDecoration(
+                    hintText: 'Search by Status or Student...',
+                    prefixIcon: const Icon(Icons.search, color: Colors.blue, size: 20),
+                    filled: true,
+                    fillColor: Theme.of(context).brightness == Brightness.light
+                        ? Colors.white
+                        : Colors.grey[900],
+                    contentPadding: const EdgeInsets.symmetric(vertical: 0),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: BorderSide.none,
+                    ),
+                    enabledBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: BorderSide.none,
+                    ),
+                  ),
                 ),
               ),
+
+            // Summary Stats
+            if (feesAsync.hasValue && !isSelectionMode)
+              _buildSummaryStats(feesAsync.value!),
+
+            const SizedBox(height: 8),
+
+            // Fees List
+            Expanded(
+              child: feesAsync.when(
+                data: (_) {
+                  if (filteredFees.isEmpty) {
+                    return const Center(child: Text('No fee records found.'));
+                  }
+                  return ListView.builder(
+                    padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+                    itemCount: filteredFees.length,
+                    itemBuilder: (context, index) {
+                      final fee = filteredFees[index];
+                      final student = studentsAsync.value
+                          ?.where((s) => s.id == fee.studentId)
+                          .firstOrNull;
+
+                      final isSelected = selectedFees.contains(fee.id);
+
+                      return FeeListItem(
+                        fee: fee,
+                        studentName: student?.fullName ?? 'Deleted Student',
+                        isSelected: isSelected,
+                        isSelectionMode: isSelectionMode,
+                        onTap: () {
+                          if (isSelectionMode) {
+                            _toggleSelection(ref, fee.id);
+                          } else {
+                            _showPaymentBottomSheet(context, fee);
+                          }
+                        },
+                        onLongPress: () {
+                          if (!isSelectionMode) {
+                            ref.read(isSelectionModeProvider.notifier).state = true;
+                            _toggleSelection(ref, fee.id);
+                          }
+                        },
+                      );
+                    },
+                  );
+                },
+                loading: () => const Center(child: CircularProgressIndicator()),
+                error: (e, _) => Center(child: Text('Error: $e')),
+              ),
             ),
-          ),
-
-          // Summary Stats
-          if (feesAsync.hasValue) _buildSummaryStats(feesAsync.value!),
-
-          const SizedBox(height: 8),
-
-          // Fees List
-          Expanded(
-            child: feesAsync.when(
-              data: (_) {
-                if (filteredFees.isEmpty) {
-                  return const Center(child: Text('No fee records found.'));
-                }
-                return ListView.builder(
-                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
-                  itemCount: filteredFees.length,
-                  itemBuilder: (context, index) {
-                    final fee = filteredFees[index];
-                    final student = studentsAsync.value
-                        ?.where((s) => s.id == fee.studentId)
-                        .firstOrNull;
-
-                    return FeeListItem(
-                      fee: fee,
-                      studentName: student?.fullName ?? 'Deleted Student',
-                      onTap: () => _showPaymentBottomSheet(context, fee),
-                    );
-                  },
-                );
-              },
-              loading: () => const Center(child: CircularProgressIndicator()),
-              error: (e, _) => Center(child: Text('Error: $e')),
-            ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
+  }
+
+  void _toggleSelection(WidgetRef ref, String feeId) {
+    final selected = Set<String>.from(ref.read(selectedFeesProvider));
+    if (selected.contains(feeId)) {
+      selected.remove(feeId);
+    } else {
+      selected.add(feeId);
+    }
+    ref.read(selectedFeesProvider.notifier).state = selected;
+    
+    if (selected.isEmpty) {
+      ref.read(isSelectionModeProvider.notifier).state = false;
+    }
   }
 
   Widget _buildSummaryStats(List<FeeModel> fees) {
@@ -136,6 +217,36 @@ class FeeManagementScreen extends ConsumerWidget {
             icon: Icons.payments_outlined,
             color: Colors.blue,
             bgColor: Colors.blue.shade50,
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showBulkDeleteConfirmation(BuildContext context, WidgetRef ref, Set<String> selectedIds) {
+    final currentUser = ref.read(userProfileProvider).value;
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Delete Multiple Records?'),
+        content: Text('Are you sure you want to delete ${selectedIds.length} fee records? This action cannot be undone.'),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancel')),
+          TextButton(
+            onPressed: () async {
+              if (currentUser != null) {
+                await ref.read(feeServiceProvider).deleteMultipleFees(selectedIds.toList(), currentUser);
+                ref.read(isSelectionModeProvider.notifier).state = false;
+                ref.read(selectedFeesProvider.notifier).state = {};
+                if (context.mounted) {
+                  Navigator.pop(context);
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(content: Text('${selectedIds.length} records deleted successfully'))
+                  );
+                }
+              }
+            }, 
+            child: const Text('Delete All', style: TextStyle(color: Colors.red))
           ),
         ],
       ),
