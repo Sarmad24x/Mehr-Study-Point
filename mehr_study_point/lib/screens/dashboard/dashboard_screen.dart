@@ -8,11 +8,13 @@ import '../../providers/auth_provider.dart';
 import '../../providers/dashboard_provider.dart';
 import '../../providers/student_provider.dart';
 import '../../providers/fee_provider.dart';
+import '../../providers/service_providers.dart';
 import '../../models/user_model.dart';
 import '../../models/fee_model.dart';
 import '../students/add_student_screen.dart';
 import '../fees/fee_management_screen.dart';
 import '../reports/reports_screen.dart';
+import '../settings/settings_screen.dart';
 import 'widgets/stat_card.dart';
 import 'widgets/occupancy_card.dart';
 import 'widgets/quick_action_button.dart';
@@ -54,7 +56,7 @@ class DashboardScreen extends ConsumerWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              _buildHeader(context, userProfile),
+              _buildHeader(context, ref, userProfile),
               const SizedBox(height: 30),
               Row(
                 children: [
@@ -93,7 +95,7 @@ class DashboardScreen extends ConsumerWidget {
     );
   }
 
-  Widget _buildHeader(BuildContext context, UserModel? userProfile) {
+  Widget _buildHeader(BuildContext context, WidgetRef ref, UserModel? userProfile) {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
     return Row(
@@ -118,17 +120,73 @@ class DashboardScreen extends ConsumerWidget {
             ],
           ),
         ),
-        CircleAvatar(
-          radius: 25,
-          backgroundImage: userProfile?.photoUrl != null
-              ? NetworkImage(userProfile!.photoUrl!)
-              : null,
-          backgroundColor: colorScheme.surfaceVariant,
-          child: userProfile?.photoUrl == null
-              ? Icon(Icons.person, color: colorScheme.onSurfaceVariant)
-              : null,
+        PopupMenuButton<String>(
+          offset: const Offset(0, 55),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
+          onSelected: (value) {
+            if (value == 'settings') {
+              Navigator.push(context, MaterialPageRoute(builder: (context) => const SettingsScreen()));
+            } else if (value == 'logout') {
+              _showLogoutDialog(context, ref);
+            }
+          },
+          itemBuilder: (context) => [
+            const PopupMenuItem(
+              value: 'settings',
+              child: Row(
+                children: [
+                  Icon(Icons.settings_outlined, size: 20),
+                  SizedBox(width: 12),
+                  Text('Settings'),
+                ],
+              ),
+            ),
+            const PopupMenuItem(
+              value: 'logout',
+              child: Row(
+                children: [
+                  Icon(Icons.logout_rounded, size: 20, color: Colors.red),
+                  SizedBox(width: 12),
+                  Text('Logout', style: TextStyle(color: Colors.red)),
+                ],
+              ),
+            ),
+          ],
+          child: CircleAvatar(
+            radius: 25,
+            backgroundImage: userProfile?.photoUrl != null
+                ? NetworkImage(userProfile!.photoUrl!)
+                : null,
+            backgroundColor: colorScheme.surfaceVariant,
+            child: userProfile?.photoUrl == null
+                ? Icon(Icons.person, color: colorScheme.onSurfaceVariant)
+                : null,
+          ),
         ),
       ],
+    );
+  }
+
+  void _showLogoutDialog(BuildContext context, WidgetRef ref) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Log Out'),
+        content: const Text('Are you sure you want to log out of your account?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () {
+              Navigator.pop(context);
+              ref.read(authServiceProvider).signOut();
+            },
+            child: const Text('Log Out', style: TextStyle(color: Colors.red)),
+          ),
+        ],
+      ),
     );
   }
 
