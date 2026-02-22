@@ -38,6 +38,7 @@ dependencies:
   google_fonts: ^8.0.0
   pdf: ^3.11.1
   printing: ^5.13.2
+  flutter_launcher_icons: ^0.14.4
 
   collection: any
 dev_dependencies:
