@@ -109,13 +109,13 @@ class DashboardScreen extends ConsumerWidget {
                 'Welcome back, ${userProfile?.name.split(' ').first ?? 'Admin'}',
                 style: theme.textTheme.headlineSmall?.copyWith(
                   fontWeight: FontWeight.bold,
-                  color: colorScheme.onBackground,
+                  color: colorScheme.onSurface,
                 ),
               ),
               Text(
                 DateFormat('EEEE, dd MMMM').format(DateTime.now()),
                 style: theme.textTheme.bodyMedium?.copyWith(
-                  color: colorScheme.onBackground.withOpacity(0.6),
+                  color: colorScheme.onSurface.withOpacity(0.6),
                 ),
               ),
             ],
@@ -158,7 +158,7 @@ class DashboardScreen extends ConsumerWidget {
             backgroundImage: userProfile?.photoUrl != null
                 ? NetworkImage(userProfile!.photoUrl!)
                 : null,
-            backgroundColor: colorScheme.surfaceVariant,
+            backgroundColor: colorScheme.surfaceContainerHighest,
             child: userProfile?.photoUrl == null
                 ? Icon(Icons.person, color: colorScheme.onSurfaceVariant)
                 : null,

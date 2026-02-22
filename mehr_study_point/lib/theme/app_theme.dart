@@ -41,8 +41,8 @@ class AppTheme {
       backgroundColor: Colors.white,
       indicatorColor: const Color(0xFF3F51B5).withOpacity(0.1),
       height: 70,
-      labelTextStyle: MaterialStateProperty.resolveWith((states) {
-        if (states.contains(MaterialState.selected)) {
+      labelTextStyle: WidgetStateProperty.resolveWith((states) {
+        if (states.contains(WidgetState.selected)) {
           return const TextStyle(
               color: Color(0xFF3F51B5),
               fontWeight: FontWeight.w600,
@@ -50,8 +50,8 @@ class AppTheme {
         }
         return const TextStyle(color: Colors.grey, fontSize: 12);
       }),
-      iconTheme: MaterialStateProperty.resolveWith((states) {
-        if (states.contains(MaterialState.selected)) {
+      iconTheme: WidgetStateProperty.resolveWith((states) {
+        if (states.contains(WidgetState.selected)) {
           return const IconThemeData(color: Color(0xFF3F51B5), size: 26);
         }
         return const IconThemeData(color: Colors.grey, size: 24);

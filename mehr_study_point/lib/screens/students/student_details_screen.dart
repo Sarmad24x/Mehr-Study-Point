@@ -446,7 +446,7 @@ class _SwapDialogContentState extends State<_SwapDialogContent> {
               labelText: 'Select New Seat',
               border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
             ),
-            value: _selectedNewSeat,
+            initialValue: _selectedNewSeat,
             items: widget.availableSeats.map((s) => DropdownMenuItem(value: s, child: Text('Seat ${s.seatNumber}'))).toList(),
             onChanged: (val) => setState(() => _selectedNewSeat = val),
           ),

@@ -4,8 +4,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/user_provider.dart';
 import '../../providers/service_providers.dart';
-import '../../providers/student_provider.dart';
-import '../../providers/fee_provider.dart';
 import '../../providers/theme_provider.dart';
 import '../../providers/settings_provider.dart';
 import '../../models/user_model.dart';

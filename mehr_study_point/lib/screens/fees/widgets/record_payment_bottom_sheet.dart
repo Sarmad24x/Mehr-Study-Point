@@ -65,7 +65,7 @@ class _RecordPaymentBottomSheetState extends ConsumerState<RecordPaymentBottomSh
           ),
           const SizedBox(height: 16),
           DropdownButtonFormField<String>(
-            value: _selectedMethod,
+            initialValue: _selectedMethod,
             decoration: InputDecoration(
               labelText: 'Payment Method',
               border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),

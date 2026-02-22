@@ -311,7 +311,7 @@ class _AddStudentScreenState extends ConsumerState<AddStudentScreen> {
                     DropdownButtonFormField<SeatModel>(
                       decoration: InputDecoration(
                         filled: true,
-                        fillColor: colorScheme.surfaceVariant.withOpacity(0.3),
+                        fillColor: colorScheme.surfaceContainerHighest.withOpacity(0.3),
                         border: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(12),
                           borderSide: BorderSide.none,
@@ -320,7 +320,7 @@ class _AddStudentScreenState extends ConsumerState<AddStudentScreen> {
                         prefixIcon: const Icon(Icons.chair_alt_outlined),
                       ),
                       hint: const Text('Choose a seat'),
-                      value: _selectedSeat,
+                      initialValue: _selectedSeat,
                       items: availableSeats.map((seat) {
                         return DropdownMenuItem(
                           value: seat,
@@ -429,7 +429,7 @@ class _AddStudentScreenState extends ConsumerState<AddStudentScreen> {
         prefixIcon: icon != null ? Icon(icon, size: 22) : null,
         prefixText: prefixText,
         filled: true,
-        fillColor: colorScheme.surfaceVariant.withOpacity(0.3),
+        fillColor: colorScheme.surfaceContainerHighest.withOpacity(0.3),
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
           borderSide: BorderSide.none,

@@ -54,7 +54,7 @@ class SeatService {
     await _firestore.collection('seats').doc(id).set(seat.toMap());
 
     if (_auditService != null) {
-      await _auditService!.logAction(AuditLogModel(
+      await _auditService.logAction(AuditLogModel(
         id: '',
         userId: currentUser.id,
         userName: currentUser.name,
@@ -72,7 +72,7 @@ class SeatService {
     await _firestore.collection('seats').doc(seatId).delete();
 
     if (_auditService != null) {
-      await _auditService!.logAction(AuditLogModel(
+      await _auditService.logAction(AuditLogModel(
         id: '',
         userId: currentUser.id,
         userName: currentUser.name,
@@ -97,7 +97,7 @@ class SeatService {
     await batch.commit();
 
     if (_auditService != null) {
-      await _auditService!.logAction(AuditLogModel(
+      await _auditService.logAction(AuditLogModel(
         id: '',
         userId: currentUser.id,
         userName: currentUser.name,
@@ -132,7 +132,7 @@ class SeatService {
     await batch.commit();
 
     if (_auditService != null) {
-      await _auditService!.logAction(AuditLogModel(
+      await _auditService.logAction(AuditLogModel(
         id: '',
         userId: currentUser.id,
         userName: currentUser.name,

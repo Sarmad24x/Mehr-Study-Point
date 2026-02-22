@@ -4,7 +4,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../providers/student_provider.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/service_providers.dart';
-import '../../models/student_model.dart';
 import '../../models/user_model.dart';
 import 'add_student_screen.dart';
 import 'widgets/student_list_item.dart';
