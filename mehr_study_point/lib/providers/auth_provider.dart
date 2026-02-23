@@ -4,12 +4,12 @@ import 'service_providers.dart';
 import '../models/user_model.dart';
 
 // Stream provider for listening to Auth state changes
-final authStateProvider = StreamProvider<User?>((ref) {
+final authStateProvider = StreamProvider.autoDispose<User?>((ref) {
   return ref.watch(authServiceProvider).authStateChanges;
 });
 
 // Future provider to get the current user's profile data
-final userProfileProvider = FutureProvider<UserModel?>((ref) async {
+final userProfileProvider = FutureProvider.autoDispose<UserModel?>((ref) async {
   final authUser = ref.watch(authStateProvider).value;
   if (authUser == null) return null;
   
@@ -17,7 +17,7 @@ final userProfileProvider = FutureProvider<UserModel?>((ref) async {
 });
 
 // Simple provider to check if the user is an admin
-final isAdminProvider = Provider<bool>((ref) {
+final isAdminProvider = Provider.autoDispose<bool>((ref) {
   final userProfile = ref.watch(userProfileProvider).value;
   return userProfile?.role == UserRole.admin;
 });

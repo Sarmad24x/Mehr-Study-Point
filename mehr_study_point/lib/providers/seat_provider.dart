@@ -1,18 +1,23 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'service_providers.dart';
+import 'auth_provider.dart';
 import '../models/seat_model.dart';
 
 // Stream of all seats
-final seatsStreamProvider = StreamProvider<List<SeatModel>>((ref) {
+// Using autoDispose so the stream closes when the screen is disposed or user logs out
+final seatsStreamProvider = StreamProvider.autoDispose<List<SeatModel>>((ref) {
+  // Watch auth state: if it changes (e.g. logout), this provider will refresh/dispose
+  ref.watch(authStateProvider);
+  
   return ref.watch(seatServiceProvider).getSeatsStream();
 });
 
 // Filtering States
-final seatSearchQueryProvider = StateProvider<String>((ref) => '');
-final seatStatusFilterProvider = StateProvider<SeatStatus?>((ref) => null);
-final seatZoneFilterProvider = StateProvider<String?>((ref) => null);
+final seatSearchQueryProvider = StateProvider.autoDispose<String>((ref) => '');
+final seatStatusFilterProvider = StateProvider.autoDispose<SeatStatus?>((ref) => null);
+final seatZoneFilterProvider = StateProvider.autoDispose<String?>((ref) => null);
 
-final filteredSeatsProvider = Provider<List<SeatModel>>((ref) {
+final filteredSeatsProvider = Provider.autoDispose<List<SeatModel>>((ref) {
   final seatsAsync = ref.watch(seatsStreamProvider);
   final searchQuery = ref.watch(seatSearchQueryProvider).toLowerCase();
   final statusFilter = ref.watch(seatStatusFilterProvider);
@@ -40,7 +45,7 @@ final filteredSeatsProvider = Provider<List<SeatModel>>((ref) {
 });
 
 // Available Zones Provider
-final seatZonesProvider = Provider<List<String>>((ref) {
+final seatZonesProvider = Provider.autoDispose<List<String>>((ref) {
   final seats = ref.watch(seatsStreamProvider).value ?? [];
   final zones = seats.map((s) => s.zone).whereType<String>().toSet().toList();
   zones.sort();

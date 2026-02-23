@@ -1,15 +1,19 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'service_providers.dart';
+import 'auth_provider.dart';
 import '../models/student_model.dart';
 
-final studentsStreamProvider = StreamProvider<List<StudentModel>>((ref) {
+final studentsStreamProvider = StreamProvider.autoDispose<List<StudentModel>>((ref) {
+  // Restart stream on auth state change
+  ref.watch(authStateProvider);
+  
   return ref.watch(studentServiceProvider).getStudentsStream();
 });
 
-final studentSearchQueryProvider = StateProvider<String>((ref) => '');
-final studentStatusFilterProvider = StateProvider<String?>((ref) => 'Active'); // Default to Active
+final studentSearchQueryProvider = StateProvider.autoDispose<String>((ref) => '');
+final studentStatusFilterProvider = StateProvider.autoDispose<String?>((ref) => 'Active'); // Default to Active
 
-final filteredStudentsProvider = Provider<List<StudentModel>>((ref) {
+final filteredStudentsProvider = Provider.autoDispose<List<StudentModel>>((ref) {
   final studentsAsync = ref.watch(studentsStreamProvider);
   final searchQuery = ref.watch(studentSearchQueryProvider).toLowerCase();
   final statusFilter = ref.watch(studentStatusFilterProvider);
