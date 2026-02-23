@@ -12,7 +12,20 @@
           "package_name": "com.example.mehr_study_point"
         }
       },
-      "oauth_client": [],
+      "oauth_client": [
+        {
+          "client_id": "918834057231-grbh3llij60kgnq1g2l3bagpa7rqbot5.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.example.mehr_study_point",
+            "certificate_hash": "259d503909f4392c92d484ed28c9d455bf6fa05b"
+          }
+        },
+        {
+          "client_id": "918834057231-fhk4m8f58gs9s0llv916q0tsjcu4nduv.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
       "api_key": [
         {
           "current_key": "AIzaSyByiXy3fnv0CvBLE0eWpaXH5UUsMFuXT_I"
@@ -20,7 +33,19 @@
       ],
       "services": {
         "appinvite_service": {
-          "other_platform_oauth_client": []
+          "other_platform_oauth_client": [
+            {
+              "client_id": "918834057231-fhk4m8f58gs9s0llv916q0tsjcu4nduv.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "918834057231-q40eqpu9orrkpriqi920b36hvd1fdqtn.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com.example.mehrStudyPoint"
+              }
+            }
+          ]
         }
       }
     }

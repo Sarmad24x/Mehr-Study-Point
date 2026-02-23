@@ -1,10 +1,12 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:google_sign_in/google_sign_in.dart';
 import '../models/user_model.dart';
 
 class AuthService {
   final FirebaseAuth _auth = FirebaseAuth.instance;
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
+  final GoogleSignIn _googleSignIn = GoogleSignIn();
 
   // Stream of auth state changes
   Stream<User?> get authStateChanges => _auth.authStateChanges();
@@ -12,7 +14,7 @@ class AuthService {
   // Get current Firebase user
   User? get currentUser => _auth.currentUser;
 
-  // Sign in
+  // Sign in with Email/Password
   Future<UserCredential> signIn(String email, String password) async {
     try {
       return await _auth.signInWithEmailAndPassword(
@@ -24,8 +26,49 @@ class AuthService {
     }
   }
 
+  // Google Sign In
+  Future<UserCredential?> signInWithGoogle() async {
+    try {
+      // 1. Trigger the authentication flow
+      final GoogleSignInAccount? googleUser = await _googleSignIn.signIn();
+      if (googleUser == null) return null; // User cancelled
+
+      // 2. Obtain the auth details from the request
+      final GoogleSignInAuthentication googleAuth = await googleUser.authentication;
+
+      // 3. Create a new credential
+      final AuthCredential credential = GoogleAuthProvider.credential(
+        accessToken: googleAuth.accessToken,
+        idToken: googleAuth.idToken,
+      );
+
+      // 4. Once signed in, return the UserCredential
+      final UserCredential userCredential = await _auth.signInWithCredential(credential);
+
+      // 5. Check if user exists in Firestore, if not create them
+      if (userCredential.user != null) {
+        final doc = await _firestore.collection('users').doc(userCredential.user!.uid).get();
+        if (!doc.exists) {
+          final newUser = UserModel(
+            id: userCredential.user!.uid,
+            email: userCredential.user!.email ?? '',
+            name: userCredential.user!.displayName ?? 'New User',
+            role: UserRole.employee, // Default role for new Google signups
+            photoUrl: userCredential.user!.photoURL,
+          );
+          await createUserInFirestore(newUser);
+        }
+      }
+
+      return userCredential;
+    } catch (e) {
+      rethrow;
+    }
+  }
+
   // Sign out
   Future<void> signOut() async {
+    await _googleSignIn.signOut();
     await _auth.signOut();
   }
 

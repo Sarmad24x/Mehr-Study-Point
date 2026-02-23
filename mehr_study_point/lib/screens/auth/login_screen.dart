@@ -29,15 +29,37 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     setState(() => _isLoading = true);
 
     try {
+      // Use trim() to avoid "Malformed Credential" errors from trailing spaces
       await ref.read(authServiceProvider).signIn(
             _emailController.text.trim(),
             _passwordController.text.trim(),
           );
-      // AuthStateProvider will automatically detect the change and switch screens
+    } catch (e) {
+      if (mounted) {
+        String errorMessage = 'Login failed. Please check your credentials.';
+        if (e.toString().contains('user-not-found')) {
+          errorMessage = 'No user found with this email.';
+        } else if (e.toString().contains('wrong-password')) {
+          errorMessage = 'Incorrect password.';
+        }
+        
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(errorMessage)),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
+    }
+  }
+
+  Future<void> _loginWithGoogle() async {
+    setState(() => _isLoading = true);
+    try {
+      await ref.read(authServiceProvider).signInWithGoogle();
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Login failed: ${e.toString()}')),
+          SnackBar(content: Text('Google Sign-In failed: ${e.toString()}')),
         );
       }
     } finally {
@@ -61,8 +83,10 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                   borderRadius: BorderRadius.circular(30),
                   child: Image.asset(
                     'assets/images/app_icon.png',
-
-                    fit: BoxFit.cover,
+                    height: 120,
+                    fit: BoxFit.contain,
+                    errorBuilder: (context, error, stackTrace) => 
+                      const Icon(Icons.school, size: 80, color: Colors.blue),
                   ),
                 ),
                 const SizedBox(height: 24),
@@ -123,8 +147,35 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                     ),
                   ),
                   child: _isLoading
-                      ? const CircularProgressIndicator(color: Colors.white)
+                      ? const SizedBox(
+                          height: 20,
+                          width: 20,
+                          child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2),
+                        )
                       : const Text('Login', style: TextStyle(fontSize: 16)),
+                ),
+                const SizedBox(height: 16),
+                const Row(
+                  children: [
+                    Expanded(child: Divider()),
+                    Padding(
+                      padding: EdgeInsets.symmetric(horizontal: 16),
+                      child: Text('OR', style: TextStyle(color: Colors.grey)),
+                    ),
+                    Expanded(child: Divider()),
+                  ],
+                ),
+                const SizedBox(height: 16),
+                OutlinedButton.icon(
+                  onPressed: _isLoading ? null : _loginWithGoogle,
+                  icon: const Icon(Icons.login), // Switched to Icon to avoid external network image loading issues
+                  label: const Text('Sign in with Google'),
+                  style: OutlinedButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(vertical: 16),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                  ),
                 ),
               ],
             ),
