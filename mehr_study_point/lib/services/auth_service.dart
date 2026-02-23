@@ -26,34 +26,45 @@ class AuthService {
     }
   }
 
-  // Google Sign In
+  // Google Sign In with Linking Logic
   Future<UserCredential?> signInWithGoogle() async {
     try {
-      // 1. Trigger the authentication flow
       final GoogleSignInAccount? googleUser = await _googleSignIn.signIn();
-      if (googleUser == null) return null; // User cancelled
+      if (googleUser == null) return null;
 
-      // 2. Obtain the auth details from the request
       final GoogleSignInAuthentication googleAuth = await googleUser.authentication;
 
-      // 3. Create a new credential
       final AuthCredential credential = GoogleAuthProvider.credential(
         accessToken: googleAuth.accessToken,
         idToken: googleAuth.idToken,
       );
 
-      // 4. Once signed in, return the UserCredential
-      final UserCredential userCredential = await _auth.signInWithCredential(credential);
+      UserCredential userCredential;
+      try {
+        // Try standard sign in
+        userCredential = await _auth.signInWithCredential(credential);
+      } catch (e) {
+        // If an account already exists with Email/Password, we catch the error
+        if (e is FirebaseAuthException && e.code == 'account-exists-with-different-credential') {
+          rethrow;
+        }
+        rethrow;
+      }
 
-      // 5. Check if user exists in Firestore, if not create them
       if (userCredential.user != null) {
+        // Sync Firestore profile
         final doc = await _firestore.collection('users').doc(userCredential.user!.uid).get();
+        
         if (!doc.exists) {
+          // Check if this is the first user
+          final usersQuery = await _firestore.collection('users').limit(1).get();
+          final isFirstUser = usersQuery.docs.isEmpty;
+
           final newUser = UserModel(
             id: userCredential.user!.uid,
             email: userCredential.user!.email ?? '',
             name: userCredential.user!.displayName ?? 'New User',
-            role: UserRole.employee, // Default role for new Google signups
+            role: isFirstUser ? UserRole.admin : UserRole.employee,
             photoUrl: userCredential.user!.photoURL,
           );
           await createUserInFirestore(newUser);
@@ -66,9 +77,24 @@ class AuthService {
     }
   }
 
+  // Method to add a Password to a Google account (Connecting them)
+  Future<void> linkEmailPassword(String email, String password) async {
+    try {
+      final user = _auth.currentUser;
+      if (user == null) throw Exception("No user logged in");
+
+      final credential = EmailAuthProvider.credential(email: email, password: password);
+      await user.linkWithCredential(credential);
+    } catch (e) {
+      rethrow;
+    }
+  }
+
   // Sign out
   Future<void> signOut() async {
-    await _googleSignIn.signOut();
+    if (await _googleSignIn.isSignedIn()) {
+      await _googleSignIn.signOut();
+    }
     await _auth.signOut();
   }
 
@@ -76,14 +102,8 @@ class AuthService {
   Future<void> changePassword(String newPassword) async {
     try {
       final user = _auth.currentUser;
-      if (user != null) {
-        await user.updatePassword(newPassword);
-      } else {
-        throw Exception("No user logged in");
-      }
-    } catch (e) {
-      rethrow;
-    }
+      if (user != null) await user.updatePassword(newPassword);
+    } catch (e) { rethrow; }
   }
 
   // Update Email
@@ -92,12 +112,9 @@ class AuthService {
       final user = _auth.currentUser;
       if (user != null) {
         await user.updateEmail(newEmail);
-        // Also update in Firestore
         await _firestore.collection('users').doc(user.uid).update({'email': newEmail});
       }
-    } catch (e) {
-      rethrow;
-    }
+    } catch (e) { rethrow; }
   }
 
   // Send Email Verification
@@ -125,49 +142,23 @@ class AuthService {
   Future<UserModel?> getUserData(String uid) async {
     try {
       final doc = await _firestore.collection('users').doc(uid).get();
-      if (doc.exists && doc.data() != null) {
-        return UserModel.fromMap(doc.data()!);
-      }
-      return null;
-    } catch (e) {
-      return null;
-    }
+      return doc.exists ? UserModel.fromMap(doc.data()!) : null;
+    } catch (e) { return null; }
   }
 
-  // Create User in Firestore (Used by Admin to add Employees)
+  // Create User in Firestore
   Future<void> createUserInFirestore(UserModel user) async {
     await _firestore.collection('users').doc(user.id).set(user.toMap());
   }
 
-  // MATURE: Create Employee Account (Auth + Firestore)
-  Future<void> registerEmployee({
-    required String email,
-    required String password,
-    required String name,
-  }) async {
-    try {
-      // 1. Create the user in Firebase Auth
-      UserCredential credential = await _auth.createUserWithEmailAndPassword(
-        email: email,
-        password: password,
-      );
-
-      if (credential.user != null) {
-        // 2. Create the user profile in Firestore
-        final newUser = UserModel(
-          id: credential.user!.uid,
-          email: email,
-          name: name,
-          role: UserRole.employee,
-        );
-        await createUserInFirestore(newUser);
-      }
-    } catch (e) {
-      rethrow;
+  // Create Employee Account (Used by Admin)
+  Future<void> registerEmployee({required String email, required String password, required String name}) async {
+    UserCredential credential = await _auth.createUserWithEmailAndPassword(email: email, password: password);
+    if (credential.user != null) {
+      await createUserInFirestore(UserModel(id: credential.user!.uid, email: email, name: name, role: UserRole.employee));
     }
   }
 
-  // Delete User (Firestore + potentially Auth via Cloud Functions in future)
   Future<void> deleteUserAccount(String uid) async {
     await _firestore.collection('users').doc(uid).delete();
   }
